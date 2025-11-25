@@ -657,7 +657,7 @@ def main():
     
     # Barre latérale
     with st.sidebar:
-        st.image("https://cdn.modrinth.com/data/iY5vMrYC/icon.png", width=150)
+        st.image("logo.png", width=150)
         st.markdown("---")
         st.markdown("### 🔗 Liens")
         st.markdown(f"[📦 Modrinth](https://modrinth.com/mod/{MODRINTH_PROJECT_SLUG})")
