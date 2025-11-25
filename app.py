@@ -179,49 +179,68 @@ def search_curseforge_modpacks():
     if not CURSEFORGE_API_KEY:
         return []
     
-    # Récupérer les modpacks qui dépendent de notre mod
     url = f"{CURSEFORGE_API_BASE}/v1/mods/search"
     headers = {"x-api-key": CURSEFORGE_API_KEY}
-    params = {
-        "gameId": 432,  # Minecraft
-        "classId": 4471,  # Modpacks
-        "pageSize": 50
-    }
     
     modpacks_with_mod = []
     
     try:
-        # Rechercher les modpacks populaires
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        modpacks = response.json()['data']
-        
-        # Vérifier chaque modpack pour voir s'il contient notre mod
-        for modpack in modpacks:
-            try:
-                # Récupérer les fichiers du modpack
-                files_url = f"{CURSEFORGE_API_BASE}/v1/mods/{modpack['id']}/files"
-                files_response = requests.get(files_url, headers=headers, params={"pageSize": 1})
+        # Rechercher sur plusieurs pages pour avoir plus de résultats
+        for page_index in range(10):  # 10 pages = 500 modpacks
+            params = {
+                "gameId": 432,  # Minecraft
+                "classId": 4471,  # Modpacks
+                "pageSize": 50,
+                "index": page_index * 50,
+                "sortField": 2,  # Popularité
+                "sortOrder": "desc"
+            }
+            
+            response = requests.get(url, headers=headers, params=params)
+            
+            if response.status_code != 200:
+                break
                 
-                if files_response.status_code == 200:
-                    files = files_response.json()['data']
-                    if files:
-                        # Vérifier les dépendances du fichier le plus récent
-                        latest_file = files[0]
-                        if 'dependencies' in latest_file:
-                            for dep in latest_file['dependencies']:
-                                if dep.get('modId') == CURSEFORGE_MOD_ID:
-                                    modpacks_with_mod.append({
-                                        'name': modpack['name'],
-                                        'slug': modpack['slug'],
-                                        'downloads': modpack['downloadCount'],
-                                        'id': modpack['id']
-                                    })
-                                    break
-            except:
-                pass
+            data = response.json()
+            modpacks = data.get('data', [])
+            
+            if not modpacks:
+                break
+            
+            # Vérifier chaque modpack
+            for modpack in modpacks:
+                try:
+                    # Récupérer tous les fichiers récents du modpack
+                    files_url = f"{CURSEFORGE_API_BASE}/v1/mods/{modpack['id']}/files"
+                    files_response = requests.get(files_url, headers=headers, params={"pageSize": 5})
+                    
+                    if files_response.status_code == 200:
+                        files = files_response.json().get('data', [])
+                        
+                        found = False
+                        for file in files:
+                            if found:
+                                break
+                            
+                            # Vérifier les dépendances
+                            if 'dependencies' in file:
+                                for dep in file['dependencies']:
+                                    if dep.get('modId') == CURSEFORGE_MOD_ID:
+                                        modpacks_with_mod.append({
+                                            'name': modpack['name'],
+                                            'slug': modpack['slug'],
+                                            'downloads': modpack['downloadCount'],
+                                            'id': modpack['id']
+                                        })
+                                        found = True
+                                        break
+                except Exception as e:
+                    continue
         
-        return modpacks_with_mod
+        # Dédupliquer par ID
+        unique_modpacks = {mp['id']: mp for mp in modpacks_with_mod}.values()
+        return list(unique_modpacks)
+        
     except Exception as e:
         st.error(f"Erreur recherche modpacks CurseForge: {e}")
         return []
@@ -654,7 +673,7 @@ def main():
     
     # Barre latérale
     with st.sidebar:
-        st.image("https://cdn.modrinth.com/data/iY5vMrYC/icon.png", width=150)
+        st.image("logo.png", width=150)
         st.markdown("---")
         st.markdown("### 🔗 Liens")
         st.markdown(f"[📦 Modrinth](https://modrinth.com/mod/{MODRINTH_PROJECT_SLUG})")
