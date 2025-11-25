@@ -23,7 +23,12 @@ USER_AGENT = "CreateNuclear-Stats/1.0"
 # Configuration CurseForge
 CURSEFORGE_API_BASE = "https://api.curseforge.com"
 CURSEFORGE_MOD_ID = 989797  # ID de Create Nuclear sur CurseForge
-CURSEFORGE_API_KEY = st.secrets.get("CURSEFORGE_API_KEY", "") if hasattr(st, 'secrets') else ""
+
+# Récupération sécurisée de la clé API CurseForge
+try:
+    CURSEFORGE_API_KEY = st.secrets.get("CURSEFORGE_API_KEY", "")
+except:
+    CURSEFORGE_API_KEY = ""
 
 # Style CSS personnalisé
 st.markdown("""
