@@ -2,3 +2,9 @@ requests
 streamlit
 plotly
 pandas
+psycopg2-binary
+sqlalchemy
+python-dateutil
+beautifulsoup4
+lxml
+cloudscraper

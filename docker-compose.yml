@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: createnuclear-postgres
+    environment:
+      POSTGRES_DB: createnuclear_stats
+      POSTGRES_USER: createnuclear
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-votremdp}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  streamlit-app:
+    build: .
+    container_name: createnuclear-app
+    command: ["python", "-m", "streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+    environment:
+      - DATABASE_URL=postgresql://createnuclear:${POSTGRES_PASSWORD:-votremdp}@postgres:5432/createnuclear_stats
+      - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  stats-collector:
+    build: .
+    container_name: createnuclear-collector
+    command: ["python", "collect_daemon.py"]
+    environment:
+      - DATABASE_URL=postgresql://createnuclear:${POSTGRES_PASSWORD:-votremdp}@postgres:5432/createnuclear_stats
+      - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  pgdata:

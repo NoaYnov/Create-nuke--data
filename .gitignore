@@ -1,1 +1,26 @@
-.streamlit/
+# Secrets et configuration
+.streamlit/secrets.toml
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+
+# Docker
+*.sql
+pgdata/
+
+# OS
+.DS_Store
+Thumbs.db
