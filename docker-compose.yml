@@ -27,6 +27,19 @@ services:
       - postgres
     restart: unless-stopped
 
+  streamlit-onepage:
+    build: .
+    container_name: createnuclear-onepage
+    command: ["python", "-m", "streamlit", "run", "app_onepage.py", "--server.port=8502", "--server.address=0.0.0.0"]
+    ports:
+      - "8502:8502"
+    environment:
+      - DATABASE_URL=postgresql://createnuclear:${POSTGRES_PASSWORD:-votremdp}@postgres:5432/createnuclear_stats
+      - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
   stats-collector:
     build: .
     container_name: createnuclear-collector
