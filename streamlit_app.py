@@ -40,10 +40,11 @@ def load_custom_css():
         /* === FONTS === */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
         
-        * {
+        /* === GLOBAL FONT FIX === */
+        html, body, [class*="css"], [class*="st-"], .stApp {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
         }
-        
+
         /* === VARIABLES CSS === */
         :root {
             --bg-primary: #0a0e1a;
@@ -52,10 +53,10 @@ def load_custom_css():
             --accent-cyan: #00e5ff;
             --accent-purple: #b794f6;
             --accent-green: #48ff91;
-            --text-primary: #f0f6fc;
-            --text-secondary: #9ba4b5;
-            --text-muted: #6b7280;
-            --border-color: rgba(139, 148, 158, 0.2);
+            --text-primary: #ffffff;
+            --text-secondary: #d1d5db;
+            --text-muted: #9ca3af;
+            --border-color: rgba(139, 148, 158, 0.3);
             --shadow-glow: rgba(0, 229, 255, 0.15);
         }
         
@@ -85,18 +86,71 @@ def load_custom_css():
             color: var(--text-secondary) !important;
         }
         
-        [data-testid="stSidebar"] h1,
-        [data-testid="stSidebar"] h2,
-        [data-testid="stSidebar"] h3 {
-            color: var(--text-primary) !important;
-            font-weight: 700 !important;
+        /* === SIDEBAR TOGGLE BUTTONS (VISIBILITY HACK) === */
+        /* 1. Bouton flottant (sidebar fermée) */
+        [data-testid="collapsedControl"] {
+            visibility: hidden !important; /* Hide everything including text */
+            width: 44px !important;
+            height: 44px !important;
+            position: relative !important;
+            z-index: 1000002 !important;
         }
-        
-        [data-testid="stSidebar"] .stMarkdown {
-            padding: 0.5rem 0;
+
+        [data-testid="collapsedControl"]::after {
+            content: "" !important;
+            visibility: visible !important; /* Show only this pseudo-element */
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 229, 255, 0.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='3' y1='12' x2='21' y2='12'%3E%3C/line%3E%3Cline x1='3' y1='6' x2='21' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='18' x2='21' y2='18'%3E%3C/line%3E%3C/svg%3E") center/24px no-repeat !important;
+            border: 1px solid var(--accent-cyan) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+            transition: all 0.3s ease !important;
+            cursor: pointer !important;
+            pointer-events: auto !important; /* Ensure clicks are captured */
         }
-        
-        /* === TYPOGRAPHY === */
+
+        [data-testid="collapsedControl"]:hover::after {
+            background-color: rgba(0, 229, 255, 0.2) !important;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.4) !important;
+            transform: scale(1.05);
+        }
+
+        /* 2. Bouton de fermeture dans la sidebar (flèche/croix) */
+        section[data-testid="stSidebar"] button[kind="header"],
+        [data-testid="stSidebar"] [data-testid="baseButton-header"] {
+            visibility: hidden !important;
+            width: 44px !important;
+            height: 44px !important;
+            position: relative !important;
+        }
+
+        section[data-testid="stSidebar"] button[kind="header"]::after,
+        [data-testid="stSidebar"] [data-testid="baseButton-header"]::after {
+            content: "" !important;
+            visibility: visible !important;
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 229, 255, 0.1) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'%3E%3C/polyline%3E%3C/svg%3E") center/24px no-repeat !important;
+            border: 1px solid var(--accent-cyan) !important;
+            border-radius: 8px !important;
+            transition: all 0.3s ease !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+        }
+
+        section[data-testid="stSidebar"] button[kind="header"]:hover::after,
+        [data-testid="stSidebar"] [data-testid="baseButton-header"]:hover::after {
+            background-color: rgba(0, 229, 255, 0.2) !important;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.4) !important;
+            transform: scale(1.05);
+        }
         h1 {
             font-size: 3rem !important;
             font-weight: 800 !important;
@@ -128,7 +182,7 @@ def load_custom_css():
         }
         
         h4 {
-            color: var(--text-secondary) !important;
+            color: #e6edf3 !important;
             font-weight: 600 !important;
             font-size: 1.1rem !important;
             margin: 1rem 0 0.5rem 0 !important;
@@ -148,8 +202,7 @@ def load_custom_css():
         
         /* === TABS === */
         .stTabs {
-            background: rgba(26, 34, 52, 0.6);
-            backdrop-filter: blur(20px);
+            background: #1a2234;
             border-radius: 16px;
             padding: 2rem;
             border: 1px solid var(--border-color);
@@ -167,7 +220,7 @@ def load_custom_css():
         .stTabs [data-baseweb="tab"] {
             background: transparent;
             border-radius: 10px;
-            color: var(--text-muted) !important;
+            color: #c9d1d9 !important;
             font-weight: 600;
             padding: 12px 28px;
             border: none;
@@ -176,16 +229,16 @@ def load_custom_css():
         }
         
         .stTabs [data-baseweb="tab"]:hover {
-            background: rgba(139, 148, 158, 0.1);
-            color: var(--text-secondary) !important;
+            background: rgba(139, 148, 158, 0.2);
+            color: #ffffff !important;
             transform: translateY(-1px);
         }
         
         .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)) !important;
-            color: #ffffff !important;
-            font-weight: 700;
-            box-shadow: 0 6px 20px var(--shadow-glow);
+            background: rgba(0, 229, 255, 0.1) !important;
+            border: 1px solid var(--accent-cyan) !important;
+            color: var(--accent-cyan) !important;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
         }
         
         /* === METRICS === */
@@ -216,8 +269,7 @@ def load_custom_css():
         }
         
         [data-testid="metric-container"] {
-            background: linear-gradient(135deg, rgba(26, 34, 52, 0.7), rgba(18, 24, 37, 0.7));
-            backdrop-filter: blur(15px);
+            background: #1a2234;
             padding: 1.75rem !important;
             border-radius: 16px;
             border: 1px solid var(--border-color);
@@ -244,56 +296,6 @@ def load_custom_css():
             box-shadow: 0 16px 48px var(--shadow-glow);
             border-color: var(--accent-cyan);
         }
-        
-        [data-testid="metric-container"]:hover::before {
-            opacity: 1;
-        }
-        
-        /* === DATAFRAMES === */
-        .stDataFrame {
-            border-radius: 12px !important;
-            overflow: hidden !important;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        }
-        
-        thead tr th {
-            background: linear-gradient(135deg, #161b22, #1c2128) !important;
-            color: var(--text-primary) !important;
-            font-weight: 700 !important;
-            padding: 16px 14px !important;
-            text-transform: uppercase;
-            font-size: 0.7rem !important;
-            letter-spacing: 0.08em;
-            border-bottom: 2px solid var(--accent-cyan) !important;
-        }
-        
-        tbody tr {
-            background: rgba(26, 34, 52, 0.5) !important;
-            transition: all 0.2s ease;
-        }
-        
-        tbody tr:nth-child(even) {
-            background: rgba(18, 24, 37, 0.5) !important;
-        }
-        
-        tbody tr:hover {
-            background: rgba(0, 229, 255, 0.08) !important;
-            box-shadow: 0 2px 12px var(--shadow-glow);
-            transform: scale(1.002);
-        }
-        
-        tbody td {
-            padding: 14px !important;
-            color: var(--text-secondary) !important;
-            border-bottom: 1px solid rgba(139, 148, 158, 0.1) !important;
-            font-family: 'Fira Code', monospace !important;
-            font-size: 0.9rem;
-        }
-        
-        /* === INPUTS === */
-        .stTextInput > div > div > input,
-        .stSelectbox > div > div,
         .stMultiSelect > div > div {
             background: rgba(26, 34, 52, 0.8) !important;
             border-radius: 10px !important;
@@ -454,7 +456,7 @@ def load_custom_css():
         
         /* === EXPANDER === */
         .streamlit-expanderHeader {
-            background: rgba(26, 34, 52, 0.6);
+            background: #1a2234;
             border-radius: 10px;
             border: 1px solid var(--border-color);
             color: var(--text-primary) !important;
@@ -462,7 +464,7 @@ def load_custom_css():
         }
         
         .streamlit-expanderHeader:hover {
-            background: rgba(26, 34, 52, 0.8);
+            background: #212b42;
             border-color: var(--accent-cyan);
         }
         
@@ -478,8 +480,7 @@ def load_custom_css():
         
         /* === CUSTOM CARD CLASS === */
         .custom-card {
-            background: linear-gradient(135deg, rgba(26, 34, 52, 0.7), rgba(18, 24, 37, 0.7));
-            backdrop-filter: blur(15px);
+            background: #1a2234;
             border-radius: 16px;
             border: 1px solid var(--border-color);
             padding: 2rem;
@@ -563,18 +564,28 @@ def load_modpacks():
 
 
 # === COMPONENTS ===
-def render_stat_card(icon: str, label: str, value: str, delta: str = None):
-    """Carte de statistique personnalisée"""
+def render_stat_card(icon: str, label: str, value: str, delta: str = None, font_size: str = "2.2rem"):
+    """Carte de statistique personnalisée avec logo au lieu d'icône"""
     delta_html = ""
     if delta:
         delta_color = "var(--accent-green)" if "+" in delta else "#ff4d4d"
         delta_html = f'<div style="color: {delta_color}; font-size: 0.9rem; font-weight: 600; margin-top: 0.5rem;">{delta}</div>'
     
+    # Utiliser logo.png au lieu d'icône
+    logo_path = Path(LOGO_PATH)
+    if logo_path.exists():
+        import base64
+        with open(logo_path, "rb") as f:
+            logo_b64 = base64.b64encode(f.read()).decode()
+        icon_html = f'<img src="data:image/png;base64,{logo_b64}" style="width: 50px; height: 50px; margin-bottom: 0.5rem; filter: drop-shadow(0 0 10px rgba(14, 255, 255, 0.5));" />'
+    else:
+        icon_html = f'<div style="font-size: 2.5rem; margin-bottom: 0.5rem;">{icon}</div>'
+    
     st.markdown(f"""
     <div class="custom-card" style="text-align: center;">
-        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">{icon}</div>
-        <div style="color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.75rem;">{label}</div>
-        <div style="font-size: 2.5rem; font-weight: 800; font-family: 'Fira Code', monospace; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{value}</div>
+        {icon_html}
+        <div style="color: #ffffff; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.75rem;">{label}</div>
+        <div style="font-size: {font_size}; font-weight: 800; font-family: 'Fira Code', monospace; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{value}</div>
         {delta_html}
     </div>
     """, unsafe_allow_html=True)
@@ -588,7 +599,7 @@ def render_sidebar():
         if logo_path.exists():
             st.image(str(logo_path), use_container_width=True)
         
-        st.markdown("### ⚛️ Create Nuclear")
+        st.markdown("###  Create Nuclear")
         st.caption("📊 Professional Statistics Dashboard")
         
         st.divider()
@@ -608,9 +619,11 @@ def render_sidebar():
                 )
             
             if curseforge_stats:
+                # Utiliser downloadCount global du mod
+                cf_downloads = curseforge_stats['mod'].get('downloadCount', 0)
                 st.metric(
                     "🔥 CurseForge Downloads",
-                    f"{curseforge_stats['total_downloads']:,}",
+                    f"{cf_downloads:,}",
                     f"+{curseforge_stats.get('daily_growth', 0):,}"
                 )
         
@@ -628,6 +641,47 @@ def render_sidebar():
         st.markdown("#### ⚙️ System")
         st.caption(f"🕐 Last update: {datetime.now().strftime('%H:%M:%S')}")
         st.caption(f"📅 {datetime.now().strftime('%Y-%m-%d')}")
+        
+        st.divider()
+        
+        # Collection Button
+        if st.button("🔄 Run Data Collection", type="primary", use_container_width=True):
+            with st.status("Running data collection...", expanded=True) as status:
+                try:
+                    st.write("🚀 Starting collection process...")
+                    import collect_stats
+                    
+                    # Rediriger stdout pour capturer les logs
+                    import io
+                    import sys
+                    
+                    class StreamlitCapture(io.StringIO):
+                        def write(self, string):
+                            if string.strip():
+                                st.write(f"📝 {string.strip()}")
+                            super().write(string)
+                    
+                    capture = StreamlitCapture()
+                    original_stdout = sys.stdout
+                    sys.stdout = capture
+                    
+                    try:
+                        result = collect_stats.main()
+                        if result == 0:
+                            status.update(label="✅ Collection completed successfully!", state="complete", expanded=False)
+                            st.success("Data collection finished!")
+                            st.cache_data.clear()
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            status.update(label="❌ Collection failed", state="error")
+                            st.error("Collection script returned error code.")
+                    finally:
+                        sys.stdout = original_stdout
+                        
+                except Exception as e:
+                    status.update(label="❌ Error occurred", state="error")
+                    st.error(f"Error: {str(e)}")
 
 
 def render_modrinth_overview(stats):
@@ -648,7 +702,20 @@ def render_modrinth_overview(stats):
     with col4:
         if stats['versions']:
             latest = stats['versions'][0]
-            render_stat_card("🆕", "Latest Version", latest['name'])
+            # Ajuster la taille de police si le nom est long
+            version_name = latest['name']
+            font_size = "2.2rem"
+            
+            if len(version_name) > 10:
+                font_size = "1.6rem"
+            if len(version_name) > 18:
+                font_size = "1.3rem"
+                
+            # Tronquer si vraiment trop long malgré la petite police
+            if len(version_name) > 25:
+                version_name = version_name[:22] + "..."
+                
+            render_stat_card("🆕", "Latest Version", version_name, font_size=font_size)
     
     with col5:
         if stats['versions']:
@@ -689,7 +756,7 @@ def render_modrinth_charts(stats):
             template='plotly_dark',
             paper_bgcolor='rgba(26, 34, 52, 0.0)',
             plot_bgcolor='rgba(26, 34, 52, 0.0)',
-            font=dict(color='#9ba4b5', family='Inter, sans-serif'),
+            font=dict(color='#ffffff', family='Inter, sans-serif'),
             height=450,
             margin=dict(l=0, r=0, t=20, b=0),
             xaxis=dict(
@@ -739,7 +806,7 @@ def render_modrinth_charts(stats):
             template='plotly_dark',
             paper_bgcolor='rgba(26, 34, 52, 0.0)',
             plot_bgcolor='rgba(26, 34, 52, 0.0)',
-            font=dict(color='#9ba4b5', family='Inter, sans-serif'),
+            font=dict(color='#ffffff', family='Inter, sans-serif'),
             height=450,
             margin=dict(l=0, r=0, t=20, b=0),
             showlegend=True,
@@ -802,7 +869,9 @@ def render_curseforge_overview(stats):
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        render_stat_card("📥", "Total Downloads", f"{stats['total_downloads']:,}")
+        # Utiliser downloadCount du mod directement (nombre global)
+        cf_downloads = stats['mod'].get('downloadCount', 0)
+        render_stat_card("📥", "Total Downloads", f"{cf_downloads:,}")
     
     with col2:
         render_stat_card("👍", "Thumbs Up", f"{stats['followers']:,}")
@@ -886,12 +955,32 @@ def render_modpacks_section():
     
     # Tableau
     if filtered:
+        # Charger les données historiques pour le calcul "Since Added"
+        db = get_database()
+        initial_downloads = {}
+        if db:
+            try:
+                initial_downloads = db.get_modpacks_initial_downloads("curseforge")
+            except Exception as e:
+                # Silencieux si erreur, on affichera juste le total
+                pass
+
         modpacks_data = []
         for m in filtered:
+            current = m.get('downloads', 0)
+            slug = m.get('slug')
+            since_added = current
+            
+            # Calculer depuis l'ajout si possible
+            if slug in initial_downloads:
+                initial = initial_downloads[slug]['downloads']
+                since_added = max(0, current - initial)
+            
             modpacks_data.append({
                 'Name': m['name'],
                 'ID': m.get('id', 'N/A'),
-                'Downloads': m.get('downloads', 0),
+                'Downloads': current,
+                'Since Added': since_added,
                 'Link': m.get('link', 'N/A')
             })
         
@@ -900,6 +989,7 @@ def render_modpacks_section():
         # Format
         display_df = df.copy()
         display_df['Downloads'] = display_df['Downloads'].apply(lambda x: f"{x:,}" if x > 0 else "N/A")
+        display_df['Since Added'] = display_df['Since Added'].apply(lambda x: f"+{x:,}" if x > 0 else "0")
         
         st.dataframe(
             display_df,
@@ -910,6 +1000,7 @@ def render_modpacks_section():
                 'Name': st.column_config.TextColumn('Name', width='large'),
                 'ID': st.column_config.TextColumn('ID', width='small'),
                 'Downloads': st.column_config.TextColumn('Downloads', width='medium'),
+                'Since Added': st.column_config.TextColumn('Since Added', width='medium', help='Downloads since tracking started'),
                 'Link': st.column_config.LinkColumn('Link', width='small', display_text="View →")
             }
         )
@@ -935,7 +1026,7 @@ def render_database_analysis():
         st.error("❌ Database connection unavailable")
         return
     
-    # Sélecteurs
+    # Sélecteurs globaux
     col1, col2, col3 = st.columns([2, 2, 3])
     
     with col1:
@@ -965,144 +1056,222 @@ def render_database_analysis():
         if st.button("🔄 Refresh Data", key="refresh_db"):
             st.cache_data.clear()
             st.rerun()
-    
-    # Charger données
-    with st.spinner("Loading historical data..."):
-        history = db.get_daily_stats_history(platform, days=days)
-    
-    if not history or len(history) == 0:
-        st.warning("⚠️ No historical data available for this period")
-        return
-    
-    # Préparer DataFrame
-    df = pd.DataFrame(history)
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values('date')
-    
-    # Calculer métriques
-    total_current = df['total_downloads'].iloc[-1] if len(df) > 0 else 0
-    total_start = df['total_downloads'].iloc[0] if len(df) > 0 else 0
-    growth = total_current - total_start
-    avg_daily = growth / len(df) if len(df) > 1 else 0
-    
-    # Métriques summary
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        render_stat_card("📊", "Current Total", f"{total_current:,}")
-    
-    with col2:
-        render_stat_card("📈", "Period Growth", f"+{growth:,}", f"+{(growth/total_start*100):.1f}%" if total_start > 0 else "")
-    
-    with col3:
-        render_stat_card("📅", "Avg Daily", f"+{avg_daily:,.0f}")
-    
-    with col4:
-        days_count = len(df)
-        render_stat_card("🗓️", "Days Tracked", str(days_count))
-    
+            
     st.divider()
     
-    # Graphique principal
-    st.markdown("### 📈 Downloads Evolution")
+    # Tabs pour les différentes vues
+    tab_global, tab_versions, tab_modpacks = st.tabs(["🌍 Global Stats", "📦 Versions Analytics", "📚 Modpacks Analytics"])
     
-    fig = go.Figure()
-    
-    # Ligne principale
-    fig.add_trace(go.Scatter(
-        x=df['date'],
-        y=df['total_downloads'],
-        mode='lines+markers',
-        name='Total Downloads',
-        line=dict(color='#00e5ff', width=3, shape='spline'),
-        marker=dict(size=8, color='#48ff91', line=dict(color='#00e5ff', width=2)),
-        fill='tozeroy',
-        fillcolor='rgba(0, 229, 255, 0.1)',
-        hovertemplate='<b>%{x|%Y-%m-%d}</b><br>Downloads: %{y:,}<extra></extra>'
-    ))
-    
-    # Tendance
-    if len(df) > 2:
-        from scipy import stats
-        x_numeric = (df['date'] - df['date'].min()).dt.days
-        slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, df['total_downloads'])
-        trend_line = slope * x_numeric + intercept
+    # === TAB 1: GLOBAL STATS ===
+    with tab_global:
+        # Charger données
+        with st.spinner("Loading historical data..."):
+            history = db.get_daily_stats_history(platform, days=days)
         
-        fig.add_trace(go.Scatter(
-            x=df['date'],
-            y=trend_line,
-            mode='lines',
-            name='Trend',
-            line=dict(color='#b794f6', width=2, dash='dash'),
-            hovertemplate='<b>Trend</b><br>%{y:,.0f}<extra></extra>'
-        ))
+        if not history or len(history) == 0:
+            st.warning("⚠️ No historical data available for this period")
+        else:
+            # Préparer DataFrame
+            df = pd.DataFrame(history, columns=['date', 'total_downloads', 'followers', 'versions_count'])
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.sort_values('date')
+            
+            # Calculer métriques
+            total_current = df['total_downloads'].iloc[-1] if len(df) > 0 else 0
+            total_start = df['total_downloads'].iloc[0] if len(df) > 0 else 0
+            growth = total_current - total_start
+            avg_daily = growth / len(df) if len(df) > 1 else 0
+            
+            # Métriques summary
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                render_stat_card("📊", "Current Total", f"{total_current:,}")
+            
+            with col2:
+                render_stat_card("📈", "Period Growth", f"+{growth:,}", f"+{(growth/total_start*100):.1f}%" if total_start > 0 else "")
+            
+            with col3:
+                render_stat_card("📅", "Avg Daily", f"+{avg_daily:,.0f}")
+            
+            with col4:
+                days_count = len(df)
+                render_stat_card("🗓️", "Days Tracked", str(days_count))
+            
+            st.markdown("### 📈 Downloads Evolution")
+            
+            fig = go.Figure()
+            
+            # Ligne principale
+            fig.add_trace(go.Scatter(
+                x=df['date'],
+                y=df['total_downloads'],
+                mode='lines+markers',
+                name='Total Downloads',
+                line=dict(color='#00e5ff', width=3, shape='spline'),
+                marker=dict(size=8, color='#48ff91', line=dict(color='#00e5ff', width=2)),
+                fill='tozeroy',
+                fillcolor='rgba(0, 229, 255, 0.1)',
+                hovertemplate='<b>%{x|%Y-%m-%d}</b><br>Downloads: %{y:,}<extra></extra>'
+            ))
+            
+            # Tendance
+            if len(df) > 2:
+                from scipy import stats
+                x_numeric = (df['date'] - df['date'].min()).dt.days
+                slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, df['total_downloads'])
+                trend_line = slope * x_numeric + intercept
+                
+                fig.add_trace(go.Scatter(
+                    x=df['date'],
+                    y=trend_line,
+                    mode='lines',
+                    name='Trend',
+                    line=dict(color='#b794f6', width=2, dash='dash'),
+                    hovertemplate='<b>Trend</b><br>%{y:,.0f}<extra></extra>'
+                ))
+            
+            fig.update_layout(
+                template='plotly_dark',
+                paper_bgcolor='rgba(26, 34, 52, 0.0)',
+                plot_bgcolor='rgba(26, 34, 52, 0.0)',
+                font=dict(color='#9ba4b5', family='Inter, sans-serif'),
+                height=500,
+                xaxis=dict(title='Date', gridcolor='rgba(139, 148, 158, 0.1)', showgrid=True),
+                yaxis=dict(title='Total Downloads', gridcolor='rgba(139, 148, 158, 0.1)', showgrid=True),
+                hovermode='x unified',
+                margin=dict(l=0, r=0, t=20, b=0),
+                legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Tableau détaillé
+            st.markdown("### 📊 Detailed Data")
+            display_df = df[['date', 'total_downloads', 'followers', 'versions_count']].copy()
+            display_df['date'] = display_df['date'].dt.strftime('%Y-%m-%d')
+            display_df['daily_growth'] = df['total_downloads'].diff().fillna(0).astype(int)
+            
+            display_df.columns = ['Date', 'Total Downloads', 'Followers', 'Versions', 'Daily Growth']
+            display_df['Total Downloads'] = display_df['Total Downloads'].apply(lambda x: f"{x:,}")
+            display_df['Daily Growth'] = display_df['Daily Growth'].apply(lambda x: f"+{x:,}" if x > 0 else str(x))
+            
+            st.dataframe(display_df.iloc[::-1], use_container_width=True, hide_index=True, height=400)
+
+    # === TAB 2: VERSIONS ANALYTICS ===
+    with tab_versions:
+        st.markdown("### 📦 Version Performance")
+        
+        # Sélecteur de version
+        versions_list = db.get_all_versions_latest(platform)
+        if not versions_list:
+            st.warning("No version data available")
+        else:
+            version_names = [v[0] for v in versions_list]
+            selected_version = st.selectbox("Select Version", version_names, key="db_version_select")
+            
+            # Charger historique version
+            v_history = db.get_version_stats_history(platform, selected_version, days=days)
+            
+            if v_history:
+                v_df = pd.DataFrame(v_history, columns=['date', 'version_name', 'downloads'])
+                v_df['date'] = pd.to_datetime(v_df['date'])
+                v_df = v_df.sort_values('date')
+                
+                # Métriques version
+                v_current = v_df['downloads'].iloc[-1]
+                v_start = v_df['downloads'].iloc[0]
+                v_growth = v_current - v_start
+                
+                c1, c2, c3 = st.columns(3)
+                with c1: render_stat_card("📥", "Total Downloads", f"{v_current:,}")
+                with c2: render_stat_card("📈", "Growth", f"+{v_growth:,}")
+                with c3: render_stat_card("📅", "First Recorded", v_df['date'].iloc[0].strftime('%Y-%m-%d'))
+                
+                # Graphique Version
+                fig_v = go.Figure()
+                fig_v.add_trace(go.Scatter(
+                    x=v_df['date'],
+                    y=v_df['downloads'],
+                    mode='lines+markers',
+                    name=selected_version,
+                    line=dict(color='#b794f6', width=3),
+                    fill='tozeroy',
+                    fillcolor='rgba(183, 148, 246, 0.1)'
+                ))
+                
+                fig_v.update_layout(
+                    template='plotly_dark',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    height=400,
+                    margin=dict(l=0, r=0, t=20, b=0),
+                    title=f"Downloads: {selected_version}"
+                )
+                st.plotly_chart(fig_v, use_container_width=True)
+                
+                # Tableau Version
+                st.dataframe(v_df.sort_values('date', ascending=False), use_container_width=True, hide_index=True)
+
+    # === TAB 3: MODPACKS ANALYTICS ===
+    with tab_modpacks:
+        st.markdown("### 📚 Modpack Performance")
+        
+        # Sélecteur de modpack
+        modpacks_list = db.get_all_modpacks_latest(platform)
+        if not modpacks_list:
+            st.warning("No modpack data available")
+        else:
+            # Filtrer ceux avec des téléchargements
+            modpacks_list = [m for m in modpacks_list if m[2] > 0]
+            modpack_options = {f"{m[0]} ({m[2]:,})": m[1] for m in modpacks_list}
+            
+            selected_modpack_label = st.selectbox("Select Modpack", list(modpack_options.keys()), key="db_modpack_select")
+            selected_slug = modpack_options[selected_modpack_label]
+            
+            # Charger historique modpack
+            m_history = db.get_modpack_stats_history(platform, selected_slug, days=days)
+            
+            if m_history:
+                m_df = pd.DataFrame(m_history, columns=['date', 'modpack_name', 'downloads'])
+                m_df['date'] = pd.to_datetime(m_df['date'])
+                m_df = m_df.sort_values('date')
+                
+                # Métriques modpack
+                m_current = m_df['downloads'].iloc[-1]
+                m_start = m_df['downloads'].iloc[0]
+                m_growth = m_current - m_start
+                
+                c1, c2, c3 = st.columns(3)
+                with c1: render_stat_card("📥", "Total Downloads", f"{m_current:,}")
+                with c2: render_stat_card("📈", "Growth", f"+{m_growth:,}")
+                with c3: render_stat_card("📅", "First Recorded", m_df['date'].iloc[0].strftime('%Y-%m-%d'))
+                
+                # Graphique Modpack
+                fig_m = go.Figure()
+                fig_m.add_trace(go.Scatter(
+                    x=m_df['date'],
+                    y=m_df['downloads'],
+                    mode='lines+markers',
+                    name=m_df['modpack_name'].iloc[0],
+                    line=dict(color='#48ff91', width=3),
+                    fill='tozeroy',
+                    fillcolor='rgba(72, 255, 145, 0.1)'
+                ))
+                
+                fig_m.update_layout(
+                    template='plotly_dark',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    height=400,
+                    margin=dict(l=0, r=0, t=20, b=0),
+                    title=f"Downloads: {m_df['modpack_name'].iloc[0]}"
+                )
+                st.plotly_chart(fig_m, use_container_width=True)
+                
+                # Tableau Modpack
+                st.dataframe(m_df.sort_values('date', ascending=False), use_container_width=True, hide_index=True)
     
-    fig.update_layout(
-        template='plotly_dark',
-        paper_bgcolor='rgba(26, 34, 52, 0.0)',
-        plot_bgcolor='rgba(26, 34, 52, 0.0)',
-        font=dict(color='#9ba4b5', family='Inter, sans-serif'),
-        height=500,
-        xaxis=dict(
-            title='Date',
-            gridcolor='rgba(139, 148, 158, 0.1)',
-            showgrid=True
-        ),
-        yaxis=dict(
-            title='Total Downloads',
-            gridcolor='rgba(139, 148, 158, 0.1)',
-            showgrid=True
-        ),
-        hovermode='x unified',
-        margin=dict(l=0, r=0, t=20, b=0),
-        legend=dict(
-            orientation='h',
-            yanchor='bottom',
-            y=1.02,
-            xanchor='right',
-            x=1
-        ),
-        hoverlabel=dict(
-            bgcolor='rgba(26, 34, 52, 0.95)',
-            font_size=12,
-            font_family='Fira Code, monospace'
-        )
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    st.divider()
-    
-    # Tableau détaillé
-    st.markdown("### 📊 Detailed Data")
-    
-    display_df = df[['date', 'total_downloads', 'followers', 'versions_count']].copy()
-    display_df['date'] = display_df['date'].dt.strftime('%Y-%m-%d')
-    
-    # Calculer croissance quotidienne
-    display_df['daily_growth'] = df['total_downloads'].diff().fillna(0).astype(int)
-    
-    display_df.columns = ['Date', 'Total Downloads', 'Followers', 'Versions', 'Daily Growth']
-    
-    # Format
-    display_df['Total Downloads'] = display_df['Total Downloads'].apply(lambda x: f"{x:,}")
-    display_df['Daily Growth'] = display_df['Daily Growth'].apply(lambda x: f"+{x:,}" if x > 0 else str(x))
-    
-    st.dataframe(
-        display_df.iloc[::-1],  # Reverse pour avoir le plus récent en haut
-        use_container_width=True,
-        hide_index=True,
-        height=400
-    )
-    
-    # Export
-    csv = df.to_csv(index=False)
-    st.download_button(
-        label="📥 Download Full History CSV",
-        data=csv,
-        file_name=f"{platform}_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
-    )
 
 
 def render_modrinth_tab():
@@ -1156,7 +1325,7 @@ def main():
         st.image(str(banner_path), use_container_width=True)
     
     # Titre principal
-    st.markdown("# ⚛️ Create Nuclear Statistics")
+    st.markdown("#  Create Nuclear Statistics")
     st.caption(f"📊 Professional Analytics Dashboard • Real-time data • Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     st.divider()
@@ -1179,7 +1348,7 @@ def main():
     
     # Footer
     st.divider()
-    st.caption("⚛️ Create Nuclear Statistics Dashboard v2.0 | Made with ❤️ using Streamlit")
+    st.caption(" Create Nuclear Statistics Dashboard v2.0 | Made with ❤️ using Streamlit")
 
 
 if __name__ == "__main__":

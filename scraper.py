@@ -12,7 +12,8 @@ class CurseForgeScraper:
     """Scraper pour la page CurseForge Legacy des dépendances"""
     
     def __init__(self):
-        self.base_url = "https://legacy.curseforge.com/minecraft/mc-mods/createnuclear/relations/dependents"
+        # Nouvelle URL du site CurseForge
+        self.base_url = "https://www.curseforge.com/minecraft/mc-mods/createnuclear/relations/dependents"
         self.scraper = None
         self._init_scraper()
     
@@ -38,46 +39,72 @@ class CurseForgeScraper:
         return self.scraper is not None
     
     def _establish_session(self) -> bool:
-        """Établit une session avec CurseForge"""
+        """Établit une session avec CurseForge avec retry"""
         if not self.is_available():
             return False
         
-        try:
-            response = self.scraper.get(
-                "https://legacy.curseforge.com/minecraft/mc-mods/createnuclear",
-                timeout=30
-            )
-            time.sleep(2)
-            return response.status_code == 200
-        except Exception as e:
-            print(f"Error establishing session: {e}")
-            return False
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Headers plus complets pour ressembler à un vrai navigateur
+                self.scraper.headers.update({
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Referer': 'https://www.google.com/',
+                    'Upgrade-Insecure-Requests': '1',
+                    'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                    'Sec-Ch-Ua-Mobile': '?0',
+                    'Sec-Ch-Ua-Platform': '"Windows"'
+                })
+
+                print(f"  Connecting to CurseForge (Attempt {attempt+1}/{max_retries})...")
+                # On teste sur la page principale
+                response = self.scraper.get(
+                    "https://www.curseforge.com/minecraft/mc-mods/createnuclear",
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    time.sleep(2)
+                    return True
+                
+                print(f"  Failed with status {response.status_code}")
+                time.sleep(5)
+                
+            except Exception as e:
+                print(f"  Error establishing session: {e}")
+                time.sleep(5)
+        
+        return False
     
     def _extract_slug_from_url(self, url: str) -> Optional[str]:
         """Extrait le slug depuis une URL"""
-        match = re.search(r'/modpacks/([^/\?]+)', url)
+        # Supporte /minecraft/modpacks/slug
+        match = re.search(r'/minecraft/modpacks/([^/\?]+)', url)
         if match:
             slug = match.group(1)
-            # Retirer l'ID à la fin si présent
-            id_match = re.search(r'-(\d+)$', slug)
-            if id_match:
-                return slug.rsplit('-', 1)[0]
             return slug
         return None
     
     def _extract_id_from_url(self, url: str) -> Optional[int]:
         """Extrait l'ID depuis une URL"""
-        match = re.search(r'/modpacks/[^/]*-(\d+)', url)
+        # Sur le nouveau site, l'ID n'est pas toujours dans l'URL
+        # On essaie de le trouver s'il est présent
+        match = re.search(r'-(\d+)$', url)
         if match:
             return int(match.group(1))
         return None
     
     def _scrape_page(self, page_num: int) -> List[Dict]:
         """Scrape une page spécifique"""
-        page_url = f"{self.base_url}?page={page_num}" if page_num > 1 else self.base_url
-        
+        # Paramètre filter-related-dependents=6 pour les modpacks
+        params = {"filter-related-dependents": "6"}
+        if page_num > 1:
+            params["page"] = str(page_num)
+            
         try:
-            response = self.scraper.get(page_url, timeout=30)
+            response = self.scraper.get(self.base_url, params=params, timeout=30)
             
             if response.status_code == 404:
                 return None  # Fin des pages
@@ -91,14 +118,21 @@ class CurseForgeScraper:
             soup = BeautifulSoup(response.text, 'html.parser')
             
             # Chercher tous les liens vers des modpacks
-            links = soup.find_all('a', href=re.compile(r'/minecraft/modpacks/[^/]+'))
+            # Sur le nouveau site, les liens sont souvent dans des cartes
+            links = soup.find_all('a', href=re.compile(r'/minecraft/modpacks/[^/]+$'))
             
             modpacks = []
             seen_slugs = set()
             
             for link in links:
                 href = link.get('href', '')
+                # Le nom est souvent dans un h3 ou similaire à l'intérieur du lien, ou le texte du lien lui-même
                 name = link.text.strip()
+                if not name:
+                    # Essayer de trouver un titre à l'intérieur
+                    title_elem = link.find(['h3', 'h4', 'span'], class_=re.compile('name|title'))
+                    if title_elem:
+                        name = title_elem.text.strip()
                 
                 if not href or not name:
                     continue
@@ -112,12 +146,8 @@ class CurseForgeScraper:
                 modpack_data = {
                     'name': name,
                     'slug': slug,
-                    'legacy_url': f"https://legacy.curseforge.com{href}" if href.startswith('/') else href
+                    'legacy_url': f"https://www.curseforge.com{href}" if href.startswith('/') else href
                 }
-                
-                mod_id = self._extract_id_from_url(href)
-                if mod_id:
-                    modpack_data['id'] = mod_id
                 
                 modpacks.append(modpack_data)
             

@@ -1,44 +1,166 @@
-# Quick Start avec Docker Compose
+# 🚀 Guide de Démarrage Rapide
 
-## Lancement rapide
+## Prérequis
+
+- Docker et Docker Compose installés
+- Git (pour cloner le projet)
+
+## Installation en 5 Minutes
+
+### 1. Cloner le Projet
 
 ```bash
-# Copier le fichier d'environnement
+git clone <votre-repo>
+cd Create-nuke--data
+```
+
+### 2. Configuration
+
+Copier et éditer le fichier de configuration :
+
+```bash
+# Windows PowerShell
+copy .env.example .env
+notepad .env
+
+# Linux/Mac
 cp .env.example .env
+nano .env
+```
 
-# Modifier .env avec vos vraies valeurs si nécessaire
+**Minimum requis dans `.env`:**
 
-# Lancer tous les services
+```env
+POSTGRES_PASSWORD=VotreMotDePasseSecurise123!
+CURSEFORGE_API_KEY=votre_cle_api
+```
+
+### 3. Démarrer les Services
+
+```bash
+# Construire et démarrer tous les services
 docker-compose up -d
+
+# Vérifier que tout fonctionne
+docker-compose ps
+```
+
+Vous devriez voir tous les services "Up" :
+
+```
+NAME                        STATUS
+createnuclear-postgres      Up (healthy)
+createnuclear-app           Up
+createnuclear-onepage       Up
+createnuclear-collector     Up
+```
+
+### 4. Accéder aux Applications
+
+- **Application principale**: http://localhost:8501
+- **Vue simplifiée**: http://localhost:8502
+
+### 5. Vérifier la Base de Données
+
+```bash
+# Accéder à PostgreSQL
+docker-compose exec postgres psql -U createnuclear -d createnuclear_stats
+
+# Dans psql, vérifier les tables
+\dt
+
+# Quitter
+\q
+```
+
+## Commandes Utiles
+
+### Gestion des Services
+
+```bash
+# Démarrer
+docker-compose up -d
+
+# Arrêter
+docker-compose down
+
+# Redémarrer
+docker-compose restart
 
 # Voir les logs
 docker-compose logs -f
 
-# Accéder à l'app
-# http://localhost:8501
+# Logs d'un service spécifique
+docker-compose logs -f postgres
+docker-compose logs -f streamlit-app
 ```
 
-## Services inclus
-
-- **postgres** : Base de données PostgreSQL sur port 5432
-- **streamlit-app** : Application web sur port 8501
-- **stats-collector** : Collecte automatique quotidienne des stats
-
-## Commandes utiles
+### Base de Données
 
 ```bash
-# Arrêter
-docker-compose down
+# Accéder à PostgreSQL
+docker-compose exec postgres psql -U createnuclear -d createnuclear_stats
 
-# Arrêter et supprimer les données
-docker-compose down -v
+# Sauvegarder
+python scripts/backup.py
 
-# Rebuild après modifications
-docker-compose up -d --build
+# Initialiser/Vérifier
+python scripts/init_db.py
+```
 
-# Forcer la collecte maintenant
+### Collecte de Données
+
+```bash
+# Collecter manuellement
 docker-compose exec stats-collector python collect_stats.py
 
-# Voir la base de données
-docker-compose exec postgres psql -U createnuclear -d createnuclear_stats
+# Voir les logs du collecteur
+docker-compose logs -f stats-collector
 ```
+
+## Troubleshooting
+
+### Le service PostgreSQL ne démarre pas
+
+```bash
+# Vérifier les logs
+docker-compose logs postgres
+
+# Recréer le volume
+docker-compose down -v
+docker-compose up -d
+```
+
+### Erreur de connexion à la base de données
+
+```bash
+# Vérifier que PostgreSQL est prêt
+docker-compose exec postgres pg_isready -U createnuclear
+
+# Vérifier les variables d'environnement
+docker-compose exec streamlit-app env | grep DATABASE
+```
+
+### L'application Streamlit ne charge pas
+
+```bash
+# Redémarrer l'application
+docker-compose restart streamlit-app
+
+# Vérifier les logs
+docker-compose logs streamlit-app
+```
+
+## Prochaines Étapes
+
+1. Consulter la [documentation complète](docs/DATABASE.md)
+2. Configurer les sauvegardes automatiques
+3. Personnaliser les intervalles de collecte
+4. Explorer l'architecture dans [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+## Support
+
+Pour plus d'aide, consultez :
+- [Documentation de déploiement](docs/DATABASE.md)
+- [Architecture du projet](docs/ARCHITECTURE.md)
+- Les logs : `docker-compose logs`

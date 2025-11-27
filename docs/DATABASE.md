@@ -1,226 +1,652 @@
-# Create Nuclear - Historisation des statistiques
+# Guide de Déploiement PostgreSQL
 
-## 📊 Système d'historisation PostgreSQL
+## 📋 Table des Matières
 
-Le système collecte automatiquement les statistiques chaque jour et les stocke dans PostgreSQL pour un suivi à long terme.
+1. [Prérequis](#prérequis)
+2. [Installation Locale](#installation-locale)
+3. [Déploiement Docker](#déploiement-docker)
+4. [Configuration](#configuration)
+5. [Initialisation](#initialisation)
+6. [Maintenance](#maintenance)
+7. [Sauvegarde et Restauration](#sauvegarde-et-restauration)
+8. [Troubleshooting](#troubleshooting)
 
-## 🗄️ Structure de la base de données
+---
 
-### Tables créées
+## 🔧 Prérequis
 
-1. **daily_stats** - Statistiques globales quotidiennes
-   - date, platform, total_downloads, followers, versions_count
+### Logiciels Requis
 
-2. **version_stats** - Statistiques par version
-   - date, platform, version_name, version_number, downloads
+- **Docker** >= 20.10
+- **Docker Compose** >= 2.0
+- **Python** >= 3.10 (pour scripts locaux)
+- **Git** (pour cloner le projet)
 
-3. **modpack_stats** - Statistiques des modpacks
-   - date, platform, modpack_name, downloads, followers
+### Vérification
 
-## 🚀 Installation
+```bash
+# Vérifier Docker
+docker --version
+docker-compose --version
 
-### 1. Installer PostgreSQL
+# Vérifier Python
+python --version
+```
 
-**Windows:**
+---
+
+## 💻 Installation Locale
+
+### Option 1: PostgreSQL Natif (Windows)
+
+#### 1. Télécharger PostgreSQL
+
+Téléchargez PostgreSQL 15 depuis [postgresql.org](https://www.postgresql.org/download/windows/)
+
+#### 2. Installation
+
 ```powershell
-# Télécharger depuis https://www.postgresql.org/download/windows/
-# Ou avec Chocolatey:
-choco install postgresql
+# Installer avec les paramètres par défaut
+# Port: 5432
+# Utilisateur: postgres
+# Définir un mot de passe fort
 ```
 
-**Linux:**
-```bash
-sudo apt-get install postgresql postgresql-contrib
-```
+#### 3. Créer la Base de Données
 
-**Docker (Recommandé):**
-```bash
-docker run --name createnuclear-postgres \
-  -e POSTGRES_PASSWORD=votremdp \
-  -e POSTGRES_DB=createnuclear_stats \
-  -p 5432:5432 \
-  -v pgdata:/var/lib/postgresql/data \
-  -d postgres:15
-```
+```powershell
+# Ouvrir psql
+psql -U postgres
 
-### 2. Créer la base de données
-
-```sql
+# Dans psql:
 CREATE DATABASE createnuclear_stats;
-CREATE USER createnuclear WITH PASSWORD 'votremdp';
+CREATE USER createnuclear WITH PASSWORD 'votre_mot_de_passe';
 GRANT ALL PRIVILEGES ON DATABASE createnuclear_stats TO createnuclear;
+\q
 ```
 
-### 3. Configurer la connexion
+#### 4. Configuration
 
-**Méthode 1: Variable d'environnement**
-```bash
-export DATABASE_URL="postgresql://createnuclear:votremdp@localhost:5432/createnuclear_stats"
+Créer un fichier `.env` à la racine du projet:
+
+```env
+DATABASE_URL=postgresql://createnuclear:votre_mot_de_passe@localhost:5432/createnuclear_stats
+POSTGRES_PASSWORD=votre_mot_de_passe
+CURSEFORGE_API_KEY=votre_cle_api
 ```
 
-**Méthode 2: Secrets Streamlit**
-Ajouter dans `.streamlit/secrets.toml`:
-```toml
-DATABASE_URL = "postgresql://createnuclear:votremdp@localhost:5432/createnuclear_stats"
-```
-
-### 4. Initialiser les tables
-
-Les tables sont créées automatiquement au premier lancement :
-```bash
-python collect_stats.py
-```
-
-## ⏰ Automatiser la collecte
-
-### Linux (Cron)
+#### 5. Initialiser les Tables
 
 ```bash
-# Éditer le crontab
-crontab -e
+# Installer les dépendances
+pip install -r requirements.txt
 
-# Ajouter cette ligne pour collecter à 2h du matin chaque jour
-0 2 * * * cd /path/to/Create-nuke--data && /usr/bin/python3 collect_stats.py >> /var/log/createnuclear-stats.log 2>&1
+# Exécuter le script d'initialisation
+python scripts/init_db.py
 ```
 
-### Windows (Tâche planifiée)
+---
 
-1. Créer `collect_daily.bat`:
-```batch
-@echo off
-cd /d "C:\path\to\Create-nuke--data"
-set DATABASE_URL=postgresql://createnuclear:votremdp@localhost:5432/createnuclear_stats
-set CURSEFORGE_API_KEY=votre_clé_api
-python collect_stats.py >> logs\collect.log 2>&1
+## 🐳 Déploiement Docker (Recommandé)
+
+### Avantages
+
+- ✅ Isolation complète
+- ✅ Reproductibilité
+- ✅ Facile à déployer
+- ✅ Pas de conflit avec d'autres services
+- ✅ Sauvegarde simplifiée
+
+### Étape 1: Cloner le Projet
+
+```bash
+git clone <votre-repo>
+cd Create-nuke--data
 ```
 
-2. Ouvrir "Planificateur de tâches"
-3. Créer une tâche basique
-4. Déclencheur : Quotidien à 2h00
-5. Action : Lancer `collect_daily.bat`
+### Étape 2: Configuration
 
-### Docker Compose (Avec collecte automatique)
+Copier le fichier d'exemple et le modifier:
 
-Modifier `docker-compose.yml`:
+```bash
+# Copier le template
+cp .env.example .env
+
+# Éditer avec vos valeurs
+notepad .env
+```
+
+Contenu du `.env`:
+
+```env
+# PostgreSQL
+POSTGRES_PASSWORD=VotreMotDePasseSecurise123!
+POSTGRES_USER=createnuclear
+POSTGRES_DB=createnuclear_stats
+
+# CurseForge API
+CURSEFORGE_API_KEY=votre_cle_api_curseforge
+
+# Database URL (utilisé par l'application)
+DATABASE_URL=postgresql://createnuclear:VotreMotDePasseSecurise123!@postgres:5432/createnuclear_stats
+```
+
+### Étape 3: Lancer les Services
+
+```bash
+# Construire et démarrer tous les services
+docker-compose up -d
+
+# Vérifier que tout fonctionne
+docker-compose ps
+```
+
+Vous devriez voir:
+
+```
+NAME                        STATUS              PORTS
+createnuclear-postgres      Up (healthy)        0.0.0.0:5432->5432/tcp
+createnuclear-app           Up                  0.0.0.0:8501->8501/tcp
+createnuclear-onepage       Up                  0.0.0.0:8502->8502/tcp
+createnuclear-collector     Up
+```
+
+### Étape 4: Accéder aux Applications
+
+- **Application principale**: http://localhost:8501
+- **Vue simplifiée**: http://localhost:8502
+- **PostgreSQL**: localhost:5432
+
+---
+
+## ⚙️ Configuration
+
+### Structure du docker-compose.yml
+
 ```yaml
 version: '3.8'
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
+    container_name: createnuclear-postgres
     environment:
-      POSTGRES_DB: createnuclear_stats
-      POSTGRES_USER: createnuclear
-      POSTGRES_PASSWORD: votremdp
+      POSTGRES_DB: ${POSTGRES_DB:-createnuclear_stats}
+      POSTGRES_USER: ${POSTGRES_USER:-createnuclear}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-createnuclear}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
-
-  streamlit-app:
-    build: .
-    ports:
-      - "8501:8501"
-    environment:
-      - DATABASE_URL=postgresql://createnuclear:votremdp@postgres:5432/createnuclear_stats
-      - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  stats-collector:
-    build: .
-    command: sh -c "while true; do python collect_stats.py && sleep 86400; done"
-    environment:
-      - DATABASE_URL=postgresql://createnuclear:votremdp@postgres:5432/createnuclear_stats
-      - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
-    depends_on:
-      - postgres
-    restart: unless-stopped
+    networks:
+      - createnuclear-network
 
 volumes:
   pgdata:
+    driver: local
+
+networks:
+  createnuclear-network:
+    driver: bridge
 ```
 
-## 📈 Nouvelles fonctionnalités dans l'app
+### Variables d'Environnement
 
-L'application Streamlit affiche maintenant :
+| Variable              | Description                          | Défaut                    | Requis |
+|-----------------------|--------------------------------------|---------------------------|--------|
+| POSTGRES_DB           | Nom de la base de données            | createnuclear_stats       | Non    |
+| POSTGRES_USER         | Utilisateur PostgreSQL               | createnuclear             | Non    |
+| POSTGRES_PASSWORD     | Mot de passe PostgreSQL              | -                         | **Oui**|
+| CURSEFORGE_API_KEY    | Clé API CurseForge                   | -                         | **Oui**|
+| DATABASE_URL          | URL complète de connexion            | Auto-généré               | Non    |
 
-1. **Historique à long terme** - Graphique des 90 derniers jours
-2. **Croissance quotidienne** - Nouveaux téléchargements par jour
-3. **Tendances** - Évolution dans le temps
+---
 
-## 🔍 Requêtes utiles
+## 🚀 Initialisation
 
-### Voir les stats des 30 derniers jours
+### Scripts d'Initialisation Automatiques
+
+Les scripts dans `docker/postgres/init/` sont exécutés automatiquement au premier démarrage:
+
+#### 01-init-database.sql
+
 ```sql
-SELECT date, platform, total_downloads, followers
-FROM daily_stats
-WHERE platform = 'modrinth'
-ORDER BY date DESC
-LIMIT 30;
+-- Création des extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+
+-- Configuration
+ALTER DATABASE createnuclear_stats SET timezone TO 'UTC';
 ```
 
-### Croissance par semaine
+#### 02-create-tables.sql
+
 ```sql
-SELECT 
-  DATE_TRUNC('week', date) as week,
-  platform,
-  MAX(total_downloads) - MIN(total_downloads) as weekly_growth
-FROM daily_stats
-GROUP BY week, platform
-ORDER BY week DESC;
+-- Table des statistiques quotidiennes
+CREATE TABLE IF NOT EXISTS daily_stats (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    platform VARCHAR(20) NOT NULL,
+    total_downloads INTEGER NOT NULL,
+    followers INTEGER,
+    versions_count INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(date, platform)
+);
+
+-- Index pour performance
+CREATE INDEX IF NOT EXISTS idx_daily_stats_date 
+ON daily_stats(date DESC);
+
+-- Table des statistiques par version
+CREATE TABLE IF NOT EXISTS version_stats (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    platform VARCHAR(20) NOT NULL,
+    version_name VARCHAR(255) NOT NULL,
+    version_number VARCHAR(255),
+    downloads INTEGER NOT NULL,
+    date_published TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(date, platform, version_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_version_stats_date 
+ON version_stats(date DESC, platform);
+
+-- Table des statistiques de modpacks
+CREATE TABLE IF NOT EXISTS modpack_stats (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    platform VARCHAR(20) NOT NULL,
+    modpack_name VARCHAR(255) NOT NULL,
+    modpack_slug VARCHAR(255),
+    downloads INTEGER NOT NULL,
+    followers INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(date, platform, modpack_slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_modpack_stats_date 
+ON modpack_stats(date DESC, platform);
+
+-- Permissions
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO createnuclear;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO createnuclear;
 ```
 
-### Top versions par période
-```sql
-SELECT 
-  version_name,
-  MAX(downloads) - MIN(downloads) as growth
-FROM version_stats
-WHERE date >= CURRENT_DATE - INTERVAL '7 days'
-  AND platform = 'modrinth'
-GROUP BY version_name
-ORDER BY growth DESC
-LIMIT 10;
+### Initialisation Manuelle
+
+Si vous devez réinitialiser la base de données:
+
+```bash
+# Arrêter les services
+docker-compose down
+
+# Supprimer le volume (ATTENTION: perte de données!)
+docker volume rm create-nuke--data_pgdata
+
+# Redémarrer
+docker-compose up -d
 ```
+
+---
 
 ## 🔧 Maintenance
 
-### Backup de la base de données
+### Commandes Utiles
+
+#### Accéder à PostgreSQL
+
 ```bash
-pg_dump createnuclear_stats > backup_$(date +%Y%m%d).sql
+# Via Docker
+docker-compose exec postgres psql -U createnuclear -d createnuclear_stats
+
+# Depuis l'hôte (si PostgreSQL client installé)
+psql -h localhost -U createnuclear -d createnuclear_stats
 ```
 
-### Restaurer un backup
-```bash
-psql createnuclear_stats < backup_20250126.sql
-```
+#### Vérifier l'État de la Base
 
-### Nettoyer les anciennes données (> 1 an)
 ```sql
-DELETE FROM daily_stats WHERE date < CURRENT_DATE - INTERVAL '1 year';
-DELETE FROM version_stats WHERE date < CURRENT_DATE - INTERVAL '1 year';
-DELETE FROM modpack_stats WHERE date < CURRENT_DATE - INTERVAL '1 year';
+-- Taille de la base de données
+SELECT pg_size_pretty(pg_database_size('createnuclear_stats'));
+
+-- Nombre d'enregistrements par table
+SELECT 'daily_stats' as table_name, COUNT(*) FROM daily_stats
+UNION ALL
+SELECT 'version_stats', COUNT(*) FROM version_stats
+UNION ALL
+SELECT 'modpack_stats', COUNT(*) FROM modpack_stats;
+
+-- Dernières entrées
+SELECT date, platform, total_downloads 
+FROM daily_stats 
+ORDER BY date DESC 
+LIMIT 10;
 ```
 
-## 🌐 Hébergement PostgreSQL gratuit
+#### Nettoyer les Anciennes Données
 
-Si vous ne voulez pas héberger PostgreSQL localement :
+```sql
+-- Supprimer les données de plus de 90 jours
+DELETE FROM daily_stats WHERE date < CURRENT_DATE - INTERVAL '90 days';
+DELETE FROM version_stats WHERE date < CURRENT_DATE - INTERVAL '90 days';
+DELETE FROM modpack_stats WHERE date < CURRENT_DATE - INTERVAL '90 days';
 
-1. **Supabase** - https://supabase.com (500 MB gratuit)
-2. **ElephantSQL** - https://www.elephantsql.com (20 MB gratuit)
-3. **Neon** - https://neon.tech (3 GB gratuit)
-4. **Render** - https://render.com (gratuit avec limitations)
+-- Vacuum pour récupérer l'espace
+VACUUM FULL;
+```
 
-Exemple avec Supabase:
+### Optimisation des Performances
+
+```sql
+-- Analyser les tables
+ANALYZE daily_stats;
+ANALYZE version_stats;
+ANALYZE modpack_stats;
+
+-- Réindexer
+REINDEX TABLE daily_stats;
+REINDEX TABLE version_stats;
+REINDEX TABLE modpack_stats;
+
+-- Vérifier les index manquants
+SELECT schemaname, tablename, attname, n_distinct, correlation
+FROM pg_stats
+WHERE schemaname = 'public'
+ORDER BY abs(correlation) DESC;
+```
+
+---
+
+## 💾 Sauvegarde et Restauration
+
+### Sauvegarde Automatique
+
+#### Script de Sauvegarde
+
+Créer `scripts/backup.sh`:
+
 ```bash
-DATABASE_URL="postgresql://postgres:votre_mdp@db.xxxxx.supabase.co:5432/postgres"
+#!/bin/bash
+
+# Configuration
+BACKUP_DIR="./backups"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/backup_$TIMESTAMP.sql"
+
+# Créer le dossier de sauvegarde
+mkdir -p $BACKUP_DIR
+
+# Sauvegarde
+docker-compose exec -T postgres pg_dump -U createnuclear createnuclear_stats > $BACKUP_FILE
+
+# Compression
+gzip $BACKUP_FILE
+
+# Garder seulement les 7 dernières sauvegardes
+ls -t $BACKUP_DIR/backup_*.sql.gz | tail -n +8 | xargs -r rm
+
+echo "Backup créé: $BACKUP_FILE.gz"
 ```
 
-## ⚠️ Notes importantes
+#### Planification (Cron)
 
-- La collecte quotidienne écrase les données du jour si déjà présentes
-- Les graphiques historiques n'apparaissent que si la base est configurée
-- Sans base de données, l'app fonctionne normalement avec les données en temps réel
+```bash
+# Éditer crontab
+crontab -e
+
+# Ajouter (sauvegarde quotidienne à 2h du matin)
+0 2 * * * /chemin/vers/scripts/backup.sh
+```
+
+### Sauvegarde Manuelle
+
+```bash
+# Sauvegarde complète
+docker-compose exec postgres pg_dump -U createnuclear createnuclear_stats > backup.sql
+
+# Sauvegarde avec compression
+docker-compose exec postgres pg_dump -U createnuclear createnuclear_stats | gzip > backup.sql.gz
+
+# Sauvegarde d'une table spécifique
+docker-compose exec postgres pg_dump -U createnuclear -t daily_stats createnuclear_stats > daily_stats_backup.sql
+```
+
+### Restauration
+
+```bash
+# Restaurer depuis une sauvegarde
+cat backup.sql | docker-compose exec -T postgres psql -U createnuclear createnuclear_stats
+
+# Restaurer depuis une sauvegarde compressée
+gunzip -c backup.sql.gz | docker-compose exec -T postgres psql -U createnuclear createnuclear_stats
+
+# Restaurer avec suppression préalable
+docker-compose exec postgres psql -U createnuclear -c "DROP DATABASE IF EXISTS createnuclear_stats;"
+docker-compose exec postgres psql -U createnuclear -c "CREATE DATABASE createnuclear_stats;"
+cat backup.sql | docker-compose exec -T postgres psql -U createnuclear createnuclear_stats
+```
+
+---
+
+## 🔍 Troubleshooting
+
+### Problème: Le conteneur PostgreSQL ne démarre pas
+
+**Symptômes**: `docker-compose ps` montre le service comme "Exited"
+
+**Solutions**:
+
+```bash
+# Vérifier les logs
+docker-compose logs postgres
+
+# Vérifier les permissions du volume
+docker volume inspect create-nuke--data_pgdata
+
+# Recréer le volume
+docker-compose down -v
+docker-compose up -d
+```
+
+### Problème: Erreur de connexion à la base de données
+
+**Symptômes**: `psycopg2.OperationalError: could not connect to server`
+
+**Solutions**:
+
+1. Vérifier que PostgreSQL est démarré:
+```bash
+docker-compose ps postgres
+```
+
+2. Vérifier la configuration réseau:
+```bash
+docker-compose exec streamlit-app ping postgres
+```
+
+3. Vérifier les variables d'environnement:
+```bash
+docker-compose exec streamlit-app env | grep DATABASE
+```
+
+### Problème: "current transaction is aborted"
+
+**Symptômes**: Erreur lors de l'insertion de données
+
+**Solutions**:
+
+```python
+# Dans le code Python, ajouter un rollback
+try:
+    # Opération base de données
+    db.save_daily_stats(...)
+except Exception as e:
+    db.conn.rollback()  # Important!
+    raise e
+```
+
+### Problème: Base de données pleine
+
+**Symptômes**: `ERROR: could not extend file`
+
+**Solutions**:
+
+```bash
+# Vérifier l'espace disque
+docker system df
+
+# Nettoyer les données anciennes (voir section Maintenance)
+
+# Augmenter la taille du volume si nécessaire
+```
+
+### Problème: Performances lentes
+
+**Solutions**:
+
+```sql
+-- Vérifier les requêtes lentes
+SELECT query, calls, total_time, mean_time
+FROM pg_stat_statements
+ORDER BY mean_time DESC
+LIMIT 10;
+
+-- Vérifier les index
+SELECT schemaname, tablename, indexname, idx_scan
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0;
+
+-- Analyser les tables
+ANALYZE;
+```
+
+---
+
+## 📊 Monitoring
+
+### Healthcheck PostgreSQL
+
+Le healthcheck est configuré dans `docker-compose.yml`:
+
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "pg_isready -U createnuclear"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+```
+
+### Vérifier la Santé
+
+```bash
+# Status des conteneurs
+docker-compose ps
+
+# Logs en temps réel
+docker-compose logs -f postgres
+
+# Statistiques de ressources
+docker stats createnuclear-postgres
+```
+
+### Métriques PostgreSQL
+
+```sql
+-- Connexions actives
+SELECT count(*) FROM pg_stat_activity;
+
+-- Taille des tables
+SELECT 
+    schemaname,
+    tablename,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+
+-- Cache hit ratio (devrait être > 99%)
+SELECT 
+    sum(heap_blks_read) as heap_read,
+    sum(heap_blks_hit) as heap_hit,
+    sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) as ratio
+FROM pg_statio_user_tables;
+```
+
+---
+
+## 🚀 Déploiement en Production
+
+### Checklist de Sécurité
+
+- [ ] Mot de passe PostgreSQL fort (min 16 caractères)
+- [ ] Port 5432 non exposé publiquement
+- [ ] SSL/TLS activé pour les connexions
+- [ ] Sauvegardes automatiques configurées
+- [ ] Monitoring actif
+- [ ] Logs rotatifs configurés
+- [ ] Firewall configuré
+
+### Configuration Production
+
+Créer `docker-compose.prod.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # NE PAS exposer le port en production
+    # ports:
+    #   - "5432:5432"
+    command: 
+      - "postgres"
+      - "-c"
+      - "ssl=on"
+      - "-c"
+      - "ssl_cert_file=/etc/ssl/certs/server.crt"
+      - "-c"
+      - "ssl_key_file=/etc/ssl/private/server.key"
+    restart: always
+```
+
+Lancer en production:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+---
+
+## 📚 Ressources Supplémentaires
+
+- [Documentation PostgreSQL](https://www.postgresql.org/docs/15/)
+- [Docker Compose Reference](https://docs.docker.com/compose/)
+- [psycopg2 Documentation](https://www.psycopg.org/docs/)
+- [PostgreSQL Performance Tuning](https://wiki.postgresql.org/wiki/Performance_Optimization)
+
+---
+
+## 🆘 Support
+
+En cas de problème:
+
+1. Vérifier les logs: `docker-compose logs`
+2. Consulter cette documentation
+3. Vérifier les issues GitHub du projet
+4. Créer une nouvelle issue avec les détails du problème

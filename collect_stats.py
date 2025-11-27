@@ -119,58 +119,83 @@ class StatsCollector:
         """Met à jour la liste des modpacks"""
         print(f"[{datetime.now()}] Updating modpacks list...")
         
-        if not self.scraper.is_available():
-            print("⚠ Scraper not available")
-            return False
-        
         if not self.curseforge.is_available():
             print("⚠ CurseForge API not available for enrichment")
             return False
-        
-        try:
-            # Étape 1: Scraper les slugs
-            modpacks = self.scraper.scrape_all()
             
-            if not modpacks:
-                print("✗ No modpacks found")
+        try:
+            # Liste des modpacks à mettre à jour
+            unique_slugs = set()
+            modpacks_to_process = []
+            
+            # 1. Charger les modpacks existants
+            existing = self.modpack_manager.load_modpacks()
+            for m in existing:
+                if m.get('slug'):
+                    unique_slugs.add(m['slug'])
+                    modpacks_to_process.append({'slug': m['slug'], 'id': m.get('id')})
+            
+            print(f"  Loaded {len(modpacks_to_process)} existing modpacks")
+
+            # 2. Scraper les nouveaux (si possible)
+            if self.scraper.is_available():
+                print("  Scraping for new modpacks...")
+                scraped = self.scraper.scrape_all()
+                if scraped:
+                    new_count = 0
+                    for m in scraped:
+                        if m['slug'] not in unique_slugs:
+                            unique_slugs.add(m['slug'])
+                            modpacks_to_process.append(m)
+                            new_count += 1
+                    print(f"  Found {new_count} new modpacks via scraping")
+                else:
+                    print("  ⚠ Scraping failed or returned no results (skipping)")
+            
+            if not modpacks_to_process:
+                print("✗ No modpacks to update")
                 return False
             
-            print(f"  Found {len(modpacks)} modpacks")
-            
-            # Étape 2: Enrichir avec l'API
-            print(f"  Enriching with CurseForge API...")
+            # 3. Enrichir/Mettre à jour avec l'API
+            print(f"  Updating stats for {len(modpacks_to_process)} modpacks...")
             enriched = []
             
-            for i, modpack in enumerate(modpacks):
+            for i, modpack in enumerate(modpacks_to_process):
+                api_data = None
+                
                 # Essayer par ID d'abord
                 if 'id' in modpack and modpack['id']:
                     api_data = self.curseforge.get_modpack_by_id(modpack['id'])
-                    if api_data:
-                        enriched.append(api_data)
-                    else:
-                        # Fallback sur slug
-                        api_data = self.curseforge.search_modpack(modpack['slug'])
-                        if api_data:
-                            enriched.append(api_data)
-                else:
-                    # Recherche par slug
+                
+                # Fallback sur slug si pas d'ID ou échec ID
+                if not api_data and 'slug' in modpack:
                     api_data = self.curseforge.search_modpack(modpack['slug'])
-                    if api_data:
-                        enriched.append(api_data)
+                
+                if api_data:
+                    enriched.append(api_data)
                 
                 # Délai toutes les N requêtes
                 if (i + 1) % BATCH_SIZE == 0:
                     time.sleep(API_DELAY)
             
-            # Étape 3: Sauvegarder
+            # 4. Sauvegarder
             if enriched:
+                # Sauvegarder en CSV
                 success = self.modpack_manager.save_to_csv(enriched)
+                
+                # Sauvegarder en base de données
+                try:
+                    self.db.save_modpack_stats("curseforge", enriched)
+                    print(f"  ✓ Saved {len(enriched)} modpacks to database")
+                except Exception as e:
+                    print(f"  ✗ Failed to save modpacks to database: {e}")
+                
                 if success:
                     stats = self.modpack_manager.get_stats()
                     print(f"✓ Modpacks: {stats['total']} saved, {stats['total_downloads']:,} total downloads")
                     return True
             
-            print("✗ No modpacks enriched")
+            print("✗ No modpacks updated")
             return False
             
         except Exception as e:

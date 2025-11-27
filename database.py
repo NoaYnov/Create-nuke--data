@@ -10,6 +10,7 @@ class StatsDatabase:
             db_url = os.environ.get('DATABASE_URL', 'postgresql://localhost/createnuclear_stats')
         
         self.conn = psycopg2.connect(db_url)
+        self.conn.set_client_encoding('UTF8')
         self.cursor = self.conn.cursor()
         self.create_tables()
     
@@ -82,71 +83,80 @@ class StatsDatabase:
         """Save daily global statistics"""
         today = datetime.now(timezone.utc).date()
         
-        self.cursor.execute("""
-            INSERT INTO daily_stats (date, platform, total_downloads, followers, versions_count)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (date, platform) 
-            DO UPDATE SET 
-                total_downloads = EXCLUDED.total_downloads,
-                followers = EXCLUDED.followers,
-                versions_count = EXCLUDED.versions_count
-        """, (today, platform, total_downloads, followers, versions_count))
-        
-        self.conn.commit()
+        try:
+            self.cursor.execute("""
+                INSERT INTO daily_stats (date, platform, total_downloads, followers, versions_count)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (date, platform) 
+                DO UPDATE SET 
+                    total_downloads = EXCLUDED.total_downloads,
+                    followers = EXCLUDED.followers,
+                    versions_count = EXCLUDED.versions_count
+            """, (today, platform, total_downloads, followers, versions_count))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise e
     
     def save_version_stats(self, platform, versions_data):
         """Save version statistics for today"""
         today = datetime.now(timezone.utc).date()
         
-        for version in versions_data:
-            date_published = None
-            if 'date_published' in version and version['date_published']:
-                try:
-                    date_published = datetime.fromisoformat(version['date_published'].replace('Z', '+00:00'))
-                except:
-                    pass
-            
-            self.cursor.execute("""
-                INSERT INTO version_stats 
-                (date, platform, version_name, version_number, downloads, date_published)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (date, platform, version_name)
-                DO UPDATE SET 
-                    downloads = EXCLUDED.downloads
-            """, (
-                today,
-                platform,
-                version['name'],
-                version.get('version_number', ''),
-                version['downloads'],
-                date_published
-            ))
-        
-        self.conn.commit()
+        try:
+            for version in versions_data:
+                date_published = None
+                if 'date_published' in version and version['date_published']:
+                    try:
+                        date_published = datetime.fromisoformat(version['date_published'].replace('Z', '+00:00'))
+                    except:
+                        pass
+                
+                self.cursor.execute("""
+                    INSERT INTO version_stats 
+                    (date, platform, version_name, version_number, downloads, date_published)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (date, platform, version_name)
+                    DO UPDATE SET 
+                        downloads = EXCLUDED.downloads
+                """, (
+                    today,
+                    platform,
+                    version['name'],
+                    version.get('version_number', ''),
+                    version['downloads'],
+                    date_published
+                ))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise e
     
     def save_modpack_stats(self, platform, modpacks_data):
         """Save modpack statistics for today"""
         today = datetime.now(timezone.utc).date()
         
-        for modpack in modpacks_data:
-            self.cursor.execute("""
-                INSERT INTO modpack_stats 
-                (date, platform, modpack_name, modpack_slug, downloads, followers)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (date, platform, modpack_slug)
-                DO UPDATE SET 
-                    downloads = EXCLUDED.downloads,
-                    followers = EXCLUDED.followers
-            """, (
-                today,
-                platform,
-                modpack['title'] if 'title' in modpack else modpack.get('name', ''),
-                modpack['slug'],
-                modpack['downloads'],
-                modpack.get('follows', modpack.get('followers', 0))
-            ))
-        
-        self.conn.commit()
+        try:
+            for modpack in modpacks_data:
+                self.cursor.execute("""
+                    INSERT INTO modpack_stats 
+                    (date, platform, modpack_name, modpack_slug, downloads, followers)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (date, platform, modpack_slug)
+                    DO UPDATE SET 
+                        downloads = EXCLUDED.downloads,
+                        followers = EXCLUDED.followers
+                """, (
+                    today,
+                    platform,
+                    modpack['title'] if 'title' in modpack else modpack.get('name', ''),
+                    modpack['slug'],
+                    modpack['downloads'],
+                    modpack.get('follows', modpack.get('followers', 0))
+                ))
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            raise e
     
     def get_daily_stats_history(self, platform, days=30):
         """Get historical daily statistics"""
@@ -214,6 +224,55 @@ class StatsDatabase:
         
         return self.cursor.fetchall()
     
+    def get_modpacks_initial_downloads(self, platform):
+        """Get initial download count for all modpacks (first recorded date)"""
+        self.cursor.execute("""
+            SELECT m.modpack_slug, m.downloads, m.date
+            FROM modpack_stats m
+            INNER JOIN (
+                SELECT modpack_slug, MIN(date) as first_date
+                FROM modpack_stats
+                WHERE platform = %s
+                GROUP BY modpack_slug
+            ) first_dates ON m.modpack_slug = first_dates.modpack_slug AND m.date = first_dates.first_date
+            WHERE m.platform = %s
+        """, (platform, platform))
+        
+        return {row[0]: {'downloads': row[1], 'date': row[2]} for row in self.cursor.fetchall()}
+
+    def get_modpack_stats_history(self, platform, modpack_slug=None, days=30):
+        """Get historical modpack statistics"""
+        if modpack_slug:
+            self.cursor.execute("""
+                SELECT date, modpack_name, downloads
+                FROM modpack_stats
+                WHERE platform = %s AND modpack_slug = %s
+                ORDER BY date DESC
+                LIMIT %s
+            """, (platform, modpack_slug, days))
+        else:
+            self.cursor.execute("""
+                SELECT date, modpack_name, downloads
+                FROM modpack_stats
+                WHERE platform = %s
+                ORDER BY date DESC
+                LIMIT %s
+            """, (platform, days))
+        
+        return self.cursor.fetchall()
+
+    def get_all_modpacks_latest(self, platform):
+        """Get latest stats for all modpacks"""
+        self.cursor.execute("""
+            SELECT DISTINCT ON (modpack_slug)
+                modpack_name, modpack_slug, downloads
+            FROM modpack_stats
+            WHERE platform = %s
+            ORDER BY modpack_slug, date DESC
+        """, (platform,))
+        
+        return self.cursor.fetchall()
+
     def close(self):
         """Close database connection"""
         self.cursor.close()

@@ -1,55 +1,213 @@
 version: '3.8'
 
+# ============================================
+# Create Nuclear Stats - Docker Compose
+# ============================================
+# Services:
+#   - postgres: Base de données PostgreSQL 15
+#   - streamlit-app: Application principale (port 8501)
+#   - streamlit-onepage: Vue simplifiée (port 8502)
+#   - stats-collector: Collecteur de statistiques
+# ============================================
+
 services:
+  # ==========================================
+  # PostgreSQL Database
+  # ==========================================
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: createnuclear-postgres
     environment:
-      POSTGRES_DB: createnuclear_stats
-      POSTGRES_USER: createnuclear
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-votremdp}
+      POSTGRES_DB: ${POSTGRES_DB:-createnuclear_stats}
+      POSTGRES_USER: ${POSTGRES_USER:-createnuclear}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      # Configuration PostgreSQL
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_WALDIR: /var/lib/postgresql/data/pg_wal
     volumes:
+      # Volume persistant pour les données
       - pgdata:/var/lib/postgresql/data
+      # Scripts d'initialisation (exécutés au premier démarrage)
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-createnuclear} -d ${POSTGRES_DB:-createnuclear_stats}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
+    networks:
+      - createnuclear-network
+    # Limites de ressources (ajustez selon vos besoins)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # Configuration PostgreSQL supplémentaire
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=100"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=2621kB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
+      - "-c"
+      - "log_timezone=UTC"
+      - "-c"
+      - "timezone=UTC"
 
+  # ==========================================
+  # Streamlit Application Principale
+  # ==========================================
   streamlit-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: createnuclear-app
-    command: ["python", "-m", "streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    command:
+      - "python"
+      - "-m"
+      - "streamlit"
+      - "run"
+      - "streamlit_app.py"
+      - "--server.port=8501"
+      - "--server.address=0.0.0.0"
+      - "--server.headless=true"
+      - "--browser.gatherUsageStats=false"
     ports:
-      - "8501:8501"
+      - "${STREAMLIT_PORT:-8501}:8501"
     environment:
-      - DATABASE_URL=postgresql://createnuclear:${POSTGRES_PASSWORD:-votremdp}@postgres:5432/createnuclear_stats
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-createnuclear}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-createnuclear_stats}
       - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
+      - PYTHONUNBUFFERED=1
+      - TZ=UTC
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - createnuclear-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8501/_stcore/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
+  # ==========================================
+  # Streamlit One-Page View
+  # ==========================================
   streamlit-onepage:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: createnuclear-onepage
-    command: ["python", "-m", "streamlit", "run", "app_onepage.py", "--server.port=8502", "--server.address=0.0.0.0"]
+    command:
+      - "python"
+      - "-m"
+      - "streamlit"
+      - "run"
+      - "app_onepage.py"
+      - "--server.port=8502"
+      - "--server.address=0.0.0.0"
+      - "--server.headless=true"
+      - "--browser.gatherUsageStats=false"
     ports:
-      - "8502:8502"
+      - "${STREAMLIT_ONEPAGE_PORT:-8502}:8502"
     environment:
-      - DATABASE_URL=postgresql://createnuclear:${POSTGRES_PASSWORD:-votremdp}@postgres:5432/createnuclear_stats
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-createnuclear}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-createnuclear_stats}
       - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
+      - PYTHONUNBUFFERED=1
+      - TZ=UTC
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - createnuclear-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8502/_stcore/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
+  # ==========================================
+  # Stats Collector Daemon
+  # ==========================================
   stats-collector:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: createnuclear-collector
-    command: ["python", "collect_daemon.py"]
+    command: [ "python", "collect_daemon.py" ]
     environment:
-      - DATABASE_URL=postgresql://createnuclear:${POSTGRES_PASSWORD:-votremdp}@postgres:5432/createnuclear_stats
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-createnuclear}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-createnuclear_stats}
       - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
+      - PYTHONUNBUFFERED=1
+      - TZ=UTC
+      # Configuration du collecteur
+      - COLLECTION_INTERVAL=${COLLECTION_INTERVAL:-21600} # 6 heures par défaut
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - createnuclear-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
 
+# ==========================================
+# Volumes
+# ==========================================
 volumes:
   pgdata:
+    driver: local
+    name: createnuclear_pgdata
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  createnuclear-network:
+    driver: bridge
+    name: createnuclear_network
