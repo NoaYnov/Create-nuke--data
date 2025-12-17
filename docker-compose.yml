@@ -19,25 +19,24 @@ services:
     container_name: createnuclear-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-createnuclear_stats}
-      POSTGRES_USER: ${POSTGRES_USER:-createnuclear}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
       # Configuration PostgreSQL
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
-      POSTGRES_INITDB_WALDIR: /var/lib/postgresql/data/pg_wal
     volumes:
       # Volume persistant pour les données
       - pgdata:/var/lib/postgresql/data
       # Scripts d'initialisation (exécutés au premier démarrage)
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-createnuclear} -d ${POSTGRES_DB:-createnuclear_stats}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-createnuclear_stats}" ]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 60s
     restart: unless-stopped
     networks:
       - createnuclear-network
@@ -83,6 +82,33 @@ services:
       - "timezone=UTC"
 
   # ==========================================
+  # pgAdmin - Database Management UI
+  # ==========================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: createnuclear-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@createnuclear.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - createnuclear-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ==========================================
   # Streamlit Application Principale
   # ==========================================
   streamlit-app:
@@ -95,7 +121,7 @@ services:
       - "-m"
       - "streamlit"
       - "run"
-      - "streamlit_app.py"
+      - "src/ui/streamlit_app.py"
       - "--server.port=8501"
       - "--server.address=0.0.0.0"
       - "--server.headless=true"
@@ -103,9 +129,10 @@ services:
     ports:
       - "${STREAMLIT_PORT:-8501}:8501"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-createnuclear}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-createnuclear_stats}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD_ENCODED}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-createnuclear_stats}
       - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
       - TZ=UTC
     depends_on:
       postgres:
@@ -138,7 +165,7 @@ services:
       - "-m"
       - "streamlit"
       - "run"
-      - "app_onepage.py"
+      - "src/ui/app_onepage.py"
       - "--server.port=8502"
       - "--server.address=0.0.0.0"
       - "--server.headless=true"
@@ -146,9 +173,10 @@ services:
     ports:
       - "${STREAMLIT_ONEPAGE_PORT:-8502}:8502"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-createnuclear}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-createnuclear_stats}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD_ENCODED}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-createnuclear_stats}
       - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
       - TZ=UTC
     depends_on:
       postgres:
@@ -176,14 +204,15 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: createnuclear-collector
-    command: [ "python", "collect_daemon.py" ]
+    command: [ "python", "src/collectors/collect_daemon.py" ]
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-createnuclear}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-createnuclear_stats}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD_ENCODED}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-createnuclear_stats}
       - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY}
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
       - TZ=UTC
       # Configuration du collecteur
-      - COLLECTION_INTERVAL=${COLLECTION_INTERVAL:-21600} # 6 heures par défaut
+      - COLLECTION_INTERVAL=${COLLECTION_INTERVAL:-86400}
     depends_on:
       postgres:
         condition: service_healthy
@@ -203,6 +232,9 @@ volumes:
   pgdata:
     driver: local
     name: createnuclear_pgdata
+  pgadmin_data:
+    driver: local
+    name: createnuclear_pgadmin
 
 # ==========================================
 # Networks

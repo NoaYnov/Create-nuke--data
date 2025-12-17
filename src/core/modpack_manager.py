@@ -5,7 +5,7 @@ import csv
 import json
 from typing import List, Dict, Optional
 from pathlib import Path
-from config import MODPACKS_CSV_PATH, MODPACKS_JSON_PATH
+from src.config import MODPACKS_CSV_PATH, MODPACKS_JSON_PATH
 
 
 class ModpackManager:

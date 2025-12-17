@@ -5,7 +5,7 @@ import re
 import time
 from typing import List, Dict, Optional
 from bs4 import BeautifulSoup
-from config import MAX_PAGES, PAGE_DELAY, CLOUDFLARE_DELAY
+from src.config import MAX_PAGES, PAGE_DELAY, CLOUDFLARE_DELAY
 
 
 class CurseForgeScraper:

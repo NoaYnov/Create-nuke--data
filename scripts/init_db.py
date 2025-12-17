@@ -10,8 +10,8 @@ from pathlib import Path
 # Ajouter le répertoire parent au path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from database import StatsDatabase
-from config import DATABASE_URL
+from src.core.database import StatsDatabase
+from src.config import DATABASE_URL
 
 
 def main():

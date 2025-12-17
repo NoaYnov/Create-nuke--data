@@ -74,46 +74,6 @@ docker-compose ps
 
 ## 📁 Structure du Projet
 
-```
-Create-nuke--data/
-├── 📄 Configuration
-│   ├── .env.example              # Template de configuration
-│   ├── docker-compose.yml        # Orchestration Docker
-│   ├── requirements.txt          # Dépendances Python
-│   └── Dockerfile                # Image Docker
-│
-├── 🐘 PostgreSQL
-│   └── docker/postgres/init/     # Scripts d'initialisation
-│       ├── 01-init-database.sql  # Extensions et config
-│       └── 02-create-tables.sql  # Création des tables
-│
-├── 🐍 Code Source
-│   ├── config.py                 # Configuration centralisée
-│   ├── database.py               # Gestion PostgreSQL
-│   ├── api_clients.py            # Clients API (Modrinth, CurseForge)
-│   ├── scraper.py                # Web scraping
-│   ├── modpack_manager.py        # Gestion des modpacks
-│   ├── collect_stats.py          # Collecteur de statistiques
-│   ├── collect_daemon.py         # Daemon de collecte
-│   ├── streamlit_app.py          # Application principale
-│   └── app_onepage.py            # Vue simplifiée
-│
-├── 🛠️ Scripts Utilitaires
-│   └── scripts/
-│       ├── init_db.py            # Initialisation DB
-│       └── backup.py             # Sauvegarde automatique
-│
-├── 📚 Documentation
-│   └── docs/
-│       ├── QUICKSTART.md         # Démarrage rapide
-│       ├── DATABASE.md           # Guide PostgreSQL
-│       └── ARCHITECTURE.md       # Architecture détaillée
-│
-└── 📊 Données
-    └── data/
-        └── curseforge_modpacks.csv  # 600+ modpacks
-```
-
 ---
 
 ## 🎯 Fonctionnalités Détaillées

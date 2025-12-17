@@ -12,10 +12,16 @@ from pathlib import Path
 import time
 
 # Import modules
-from api_clients import ModrinthClient, CurseForgeClient
-from modpack_manager import ModpackManager
-from database import StatsDatabase
-from config import DATABASE_URL, CACHE_TTL, LOGO_PATH, BANNER_PATH
+import sys
+from pathlib import Path
+
+# Ajouter le répertoire racine au path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from src.core.api_clients import ModrinthClient, CurseForgeClient
+from src.core.modpack_manager import ModpackManager
+from src.core.database import StatsDatabase
+from src.config import DATABASE_URL, CACHE_TTL, LOGO_PATH, BANNER_PATH
 
 
 # === PAGE CONFIG ===
@@ -649,7 +655,7 @@ def render_sidebar():
             with st.status("Running data collection...", expanded=True) as status:
                 try:
                     st.write("🚀 Starting collection process...")
-                    import collect_stats
+                    from src.collectors import collect_stats
                     
                     # Rediriger stdout pour capturer les logs
                     import io

@@ -3,7 +3,7 @@ Clients API pour Modrinth et CurseForge
 """
 import requests
 from typing import Optional, List, Dict, Any
-from config import (
+from src.config import (
     MODRINTH_API_BASE, 
     MODRINTH_PROJECT_SLUG,
     CURSEFORGE_API_BASE,

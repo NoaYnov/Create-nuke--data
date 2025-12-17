@@ -8,14 +8,14 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-# Ajouter le répertoire parent au path
-sys.path.insert(0, str(Path(__file__).parent))
+# Ajouter le répertoire racine au path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from database import StatsDatabase
-from api_clients import ModrinthClient, CurseForgeClient
-from scraper import CurseForgeScraper
-from modpack_manager import ModpackManager
-from config import DATABASE_URL, API_DELAY, BATCH_SIZE
+from src.core.database import StatsDatabase
+from src.core.api_clients import ModrinthClient, CurseForgeClient
+from src.core.scraper import CurseForgeScraper
+from src.core.modpack_manager import ModpackManager
+from src.config import DATABASE_URL, API_DELAY, BATCH_SIZE
 
 
 class StatsCollector:
@@ -129,7 +129,7 @@ class StatsCollector:
             modpacks_to_process = []
             
             # 1. Charger les modpacks existants
-            existing = self.modpack_manager.load_modpacks()
+            existing = self.modpack_manager.load()
             for m in existing:
                 if m.get('slug'):
                     unique_slugs.add(m['slug'])

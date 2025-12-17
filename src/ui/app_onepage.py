@@ -9,10 +9,16 @@ from datetime import datetime
 from dateutil import parser as date_parser
 
 # Import modules
-from api_clients import ModrinthClient, CurseForgeClient
-from modpack_manager import ModpackManager
-from database import StatsDatabase
-from config import DATABASE_URL, CACHE_TTL
+import sys
+from pathlib import Path
+
+# Ajouter le répertoire racine au path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from src.core.api_clients import ModrinthClient, CurseForgeClient
+from src.core.modpack_manager import ModpackManager
+from src.core.database import StatsDatabase
+from src.config import DATABASE_URL, CACHE_TTL
 
 
 # === PAGE CONFIG ===

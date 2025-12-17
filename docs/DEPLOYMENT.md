@@ -1,230 +1,496 @@
-# Create Nuclear - Guide de déploiement
+# 🚀 Déploiement - Guide Complet
 
-## 🐳 Déploiement Docker (Recommandé)
+## 📋 Table des Matières
 
-### Prérequis
-- Docker et Docker Compose installés
+1. [Prérequis](#prérequis)
+2. [Installation Rapide](#installation-rapide)
+3. [Configuration](#configuration)
+4. [Démarrage](#démarrage)
+5. [Vérification](#vérification)
+6. [Production](#production)
+7. [Maintenance](#maintenance)
 
-### Installation rapide
+---
 
-1. **Cloner le projet**
+## 🔧 Prérequis
+
+### Logiciels Requis
+
 ```bash
-git clone https://github.com/NoaYnov/Create-nuke--data.git
+# Vérifier les versions
+docker --version          # >= 20.10
+docker-compose --version  # >= 2.0
+python --version          # >= 3.10
+git --version
+```
+
+### Obtenir une Clé API CurseForge
+
+1. Aller sur [CurseForge Console](https://console.curseforge.com/)
+2. Créer un compte / Se connecter
+3. Créer une nouvelle API Key
+4. Copier la clé (vous en aurez besoin)
+
+---
+
+## ⚡ Installation Rapide
+
+### 1. Cloner le Projet
+
+```bash
+git clone <votre-repo>
 cd Create-nuke--data
 ```
 
-2. **Configurer la clé API**
+### 2. Vérifier l'Environnement
+
 ```bash
+python scripts/check_env.py
+```
+
+### 3. Configuration
+
+```bash
+# Copier le template
 cp .env.example .env
-# Éditez .env avec votre vraie clé CurseForge
+
+# Éditer (Windows)
+notepad .env
+
+# Éditer (Linux/Mac)
+nano .env
 ```
 
-3. **Lancer avec Docker Compose**
+**Minimum requis dans `.env`:**
+
+```env
+POSTGRES_PASSWORD=VotreMotDePasseSecurise123!
+CURSEFORGE_API_KEY=votre_cle_api_curseforge
+```
+
+### 4. Démarrer
+
 ```bash
+# Construire et démarrer
 docker-compose up -d
+
+# Vérifier
+docker-compose ps
 ```
 
-L'application sera accessible sur `http://localhost:8501`
+### 5. Accéder
 
-### Commandes utiles
+- **Application**: http://localhost:8501
+- **Vue simplifiée**: http://localhost:8502
+
+---
+
+## ⚙️ Configuration
+
+### Variables d'Environnement Essentielles
+
+| Variable | Description | Exemple | Requis |
+|----------|-------------|---------|--------|
+| `POSTGRES_PASSWORD` | Mot de passe PostgreSQL | `MySecurePass123!` | ✅ |
+| `CURSEFORGE_API_KEY` | Clé API CurseForge | `$2a$10$...` | ✅ |
+| `POSTGRES_USER` | Utilisateur PostgreSQL | `createnuclear` | ❌ |
+| `POSTGRES_DB` | Nom de la base | `createnuclear_stats` | ❌ |
+| `COLLECTION_INTERVAL` | Intervalle collecte (sec) | `21600` (6h) | ❌ |
+
+### Configuration Avancée
+
+```env
+# Ports personnalisés
+POSTGRES_PORT=5432
+STREAMLIT_PORT=8501
+STREAMLIT_ONEPAGE_PORT=8502
+
+# Collecte
+COLLECTION_INTERVAL=21600  # 6 heures
+
+# Environnement
+ENVIRONMENT=development
+DEBUG=false
+```
+
+---
+
+## 🚀 Démarrage
+
+### Développement
+
 ```bash
-# Voir les logs
+# Démarrer avec logs
+docker-compose up
+
+# Démarrer en arrière-plan
+docker-compose up -d
+
+# Reconstruire après modification
+docker-compose up -d --build
+```
+
+### Production
+
+```bash
+# Utiliser la configuration production
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Vérifier
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps
+```
+
+### Services Individuels
+
+```bash
+# Démarrer seulement PostgreSQL
+docker-compose up -d postgres
+
+# Démarrer app + postgres
+docker-compose up -d postgres streamlit-app
+
+# Redémarrer un service
+docker-compose restart streamlit-app
+```
+
+---
+
+## ✅ Vérification
+
+### 1. État des Services
+
+```bash
+# Voir tous les services
+docker-compose ps
+
+# Devrait afficher:
+# NAME                        STATUS
+# createnuclear-postgres      Up (healthy)
+# createnuclear-app           Up
+# createnuclear-onepage       Up
+# createnuclear-collector     Up
+```
+
+### 2. Logs
+
+```bash
+# Tous les logs
+docker-compose logs
+
+# Logs en temps réel
 docker-compose logs -f
 
-# Arrêter l'application
+# Logs d'un service
+docker-compose logs -f postgres
+```
+
+### 3. Base de Données
+
+```bash
+# Vérifier PostgreSQL
+docker-compose exec postgres pg_isready -U createnuclear
+
+# Accéder à la base
+docker-compose exec postgres psql -U createnuclear -d createnuclear_stats
+
+# Dans psql:
+\dt                          # Lister les tables
+SELECT COUNT(*) FROM daily_stats;
+\q                           # Quitter
+```
+
+### 4. Applications
+
+```bash
+# Tester l'application principale
+curl http://localhost:8501/_stcore/health
+
+# Tester la vue simplifiée
+curl http://localhost:8502/_stcore/health
+```
+
+### 5. Collecteur
+
+```bash
+# Voir les logs du collecteur
+docker-compose logs stats-collector
+
+# Collecter manuellement
+docker-compose exec stats-collector python collect_stats.py
+```
+
+---
+
+## 🏭 Production
+
+### Checklist de Déploiement
+
+- [ ] Mot de passe PostgreSQL fort (min 16 caractères)
+- [ ] Clé API CurseForge valide
+- [ ] `.env` configuré et sécurisé
+- [ ] Port 5432 non exposé publiquement
+- [ ] Sauvegardes automatiques configurées
+- [ ] Monitoring actif
+- [ ] Logs rotatifs configurés
+- [ ] Firewall configuré
+- [ ] SSL/TLS configuré (si applicable)
+
+### Déploiement Production
+
+```bash
+# 1. Vérifier la configuration
+python scripts/check_env.py
+
+# 2. Démarrer en mode production
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# 3. Vérifier
+docker-compose ps
+docker-compose logs -f
+
+# 4. Initialiser la base
+python scripts/init_db.py
+
+# 5. Première collecte
+docker-compose exec stats-collector python collect_stats.py
+```
+
+### Sauvegardes Automatiques
+
+```bash
+# Configurer cron (Linux/Mac)
+crontab -e
+
+# Ajouter:
+0 2 * * * cd /chemin/vers/projet && python scripts/backup.py >> /var/log/backup.log 2>&1
+
+# Windows Task Scheduler
+# Créer une tâche planifiée qui exécute:
+python C:\chemin\vers\projet\scripts\backup.py
+```
+
+### Monitoring
+
+```bash
+# Statistiques en temps réel
+docker stats
+
+# Vérifier la santé
+docker-compose ps
+curl http://localhost:8501/_stcore/health
+
+# Logs avec horodatage
+docker-compose logs --timestamps
+```
+
+---
+
+## 🔧 Maintenance
+
+### Arrêt et Redémarrage
+
+```bash
+# Arrêter tous les services
 docker-compose down
+
+# Arrêter et supprimer les volumes (⚠️ PERTE DE DONNÉES)
+docker-compose down -v
 
 # Redémarrer
 docker-compose restart
 
-# Rebuild après modifications
-docker-compose up -d --build
+# Redémarrer un service
+docker-compose restart streamlit-app
+```
+
+### Mise à Jour
+
+```bash
+# 1. Sauvegarder
+python scripts/backup.py
+
+# 2. Arrêter
+docker-compose down
+
+# 3. Mettre à jour le code
+git pull
+
+# 4. Reconstruire
+docker-compose build
+
+# 5. Démarrer
+docker-compose up -d
+
+# 6. Vérifier
+docker-compose ps
+docker-compose logs -f
+```
+
+### Nettoyage
+
+```bash
+# Nettoyer les images inutilisées
+docker system prune
+
+# Nettoyer tout (attention!)
+docker system prune -a
+
+# Voir l'espace utilisé
+docker system df
+```
+
+### Sauvegarde et Restauration
+
+```bash
+# Sauvegarder
+python scripts/backup.py
+
+# Restaurer (interactif)
+python scripts/restore.py
+
+# Restaurer un fichier spécifique
+python scripts/restore.py backups/backup_20250127_120000.sql.gz
 ```
 
 ---
 
-## 🖥️ Déploiement sur Windows (Service)
+## 🐛 Dépannage
 
-### Option 1: NSSM (Non-Sucking Service Manager)
+### PostgreSQL ne démarre pas
 
-1. **Télécharger NSSM**
-   - https://nssm.cc/download
-
-2. **Installer le service**
-```powershell
-# Naviguer vers le dossier NSSM
-cd C:\nssm\win64
-
-# Installer le service
-.\nssm.exe install CreateNuclearStats "C:\Python311\Scripts\streamlit.exe" "run C:\path\to\app.py"
-
-# Configurer le répertoire de travail
-.\nssm.exe set CreateNuclearStats AppDirectory "C:\path\to\Create-nuke--data"
-
-# Démarrer le service
-.\nssm.exe start CreateNuclearStats
-```
-
-### Option 2: Tâche planifiée Windows
-
-1. Créer un script `start.bat`:
-```batch
-@echo off
-cd /d "C:\Users\Gambey\Documents\CN DATA\Create-nuke--data"
-streamlit run app.py --server.port=8501 --server.headless=true
-```
-
-2. Créer une tâche planifiée qui exécute ce script au démarrage
-
----
-
-## 🐧 Déploiement sur Linux (Systemd)
-
-### Créer un service systemd
-
-1. **Créer le fichier service**
 ```bash
-sudo nano /etc/systemd/system/createnuclear.service
+# Voir les logs
+docker-compose logs postgres
+
+# Recréer le volume
+docker-compose down -v
+docker-compose up -d
 ```
 
-2. **Contenu du service**
-```ini
-[Unit]
-Description=Create Nuclear Stats Dashboard
-After=network.target
+### Application ne charge pas
 
-[Service]
-Type=simple
-User=votre_utilisateur
-WorkingDirectory=/home/votre_utilisateur/Create-nuke--data
-Environment="PATH=/home/votre_utilisateur/.local/bin"
-ExecStart=/usr/local/bin/streamlit run app.py --server.port=8501 --server.headless=true
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-3. **Activer et démarrer**
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable createnuclear
-sudo systemctl start createnuclear
+# Redémarrer
+docker-compose restart streamlit-app
 
 # Voir les logs
-sudo journalctl -u createnuclear -f
+docker-compose logs streamlit-app
+
+# Vérifier la connexion DB
+docker-compose exec streamlit-app python -c "from database import StatsDatabase; db = StatsDatabase(); print('OK')"
 ```
 
----
+### Erreur de connexion base de données
 
-## 🌐 Exposition sur Internet
-
-### Option 1: Nginx Reverse Proxy
-
-**Configuration Nginx**:
-```nginx
-server {
-    listen 80;
-    server_name stats.votredomaine.com;
-
-    location / {
-        proxy_pass http://localhost:8501;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-### Option 2: Cloudflare Tunnel (Gratuit, sans ouvrir de ports)
-
-1. **Installer cloudflared**
 ```bash
-# Windows
-winget install Cloudflare.cloudflared
+# Vérifier PostgreSQL
+docker-compose exec postgres pg_isready -U createnuclear
 
-# Linux
-wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-sudo dpkg -i cloudflared-linux-amd64.deb
+# Vérifier les variables
+docker-compose exec streamlit-app env | grep DATABASE
+
+# Tester la connexion
+docker-compose exec postgres psql -U createnuclear -d createnuclear_stats -c "SELECT 1"
 ```
 
-2. **Créer le tunnel**
+### Collecteur ne fonctionne pas
+
 ```bash
-cloudflared tunnel login
-cloudflared tunnel create createnuclear
-cloudflared tunnel route dns createnuclear stats.votredomaine.com
+# Voir les logs
+docker-compose logs stats-collector
+
+# Tester manuellement
+docker-compose exec stats-collector python collect_stats.py
+
+# Vérifier les variables
+docker-compose exec stats-collector env | grep -E "(DATABASE|CURSEFORGE)"
 ```
 
-3. **Configurer et lancer**
+---
+
+## 📊 Commandes Utiles
+
+### Docker Compose
+
 ```bash
-cloudflared tunnel --url http://localhost:8501 run createnuclear
+# État
+docker-compose ps
+docker-compose top
+
+# Logs
+docker-compose logs -f
+docker-compose logs --tail=100 postgres
+
+# Ressources
+docker stats
+
+# Configuration
+docker-compose config
+```
+
+### PostgreSQL
+
+```bash
+# Accès
+docker-compose exec postgres psql -U createnuclear -d createnuclear_stats
+
+# Commande directe
+docker-compose exec postgres psql -U createnuclear -d createnuclear_stats -c "SELECT COUNT(*) FROM daily_stats"
+
+# Dump
+docker-compose exec postgres pg_dump -U createnuclear createnuclear_stats > backup.sql
+```
+
+### Scripts
+
+```bash
+# Vérification environnement
+python scripts/check_env.py
+
+# Initialisation DB
+python scripts/init_db.py
+
+# Sauvegarde
+python scripts/backup.py
+
+# Restauration
+python scripts/restore.py
+
+# Migrations
+python scripts/migrate.py status
+python scripts/migrate.py up
+python scripts/migrate.py down
 ```
 
 ---
 
-## 📊 Solutions alternatives
+## 📚 Documentation
 
-### 1. **Portainer** (Interface Docker web)
-- Interface graphique pour gérer Docker
-- `docker run -d -p 9000:9000 --name=portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer-ce`
-- Accès: `http://localhost:9000`
-
-### 2. **Traefik** (Reverse proxy automatique)
-- Gestion automatique HTTPS avec Let's Encrypt
-- Découverte automatique des services Docker
-
-### 3. **Coolify** (PaaS auto-hébergé)
-- Alternative à Heroku/Vercel
-- https://coolify.io
-
-### 4. **Caprover** (PaaS simple)
-- Déploiement en un clic
-- https://caprover.com
+- **[Guide de démarrage rapide](QUICKSTART.md)** - Installation en 5 minutes
+- **[Documentation PostgreSQL](DATABASE.md)** - Guide complet de la base de données
+- **[Architecture](ARCHITECTURE.md)** - Architecture détaillée du projet
+- **[Référence](REFERENCE.md)** - Référence rapide des commandes
+- **[Changelog](../CHANGELOG.md)** - Historique des modifications
 
 ---
 
-## ⚡ Comparaison des solutions
+## 🆘 Support
 
-| Solution | Complexité | Ressources | Avantages |
-|----------|-----------|-----------|-----------|
-| **Docker Compose** | ⭐⭐ | Faibles | Portable, facile |
-| **Service Windows** | ⭐⭐⭐ | Très faibles | Natif Windows |
-| **Systemd Linux** | ⭐⭐ | Très faibles | Natif Linux, robuste |
-| **Cloudflare Tunnel** | ⭐ | Très faibles | Gratuit, sécurisé, pas de ports |
-| **Docker + Nginx** | ⭐⭐⭐ | Moyennes | Production-ready |
+### En cas de problème
 
----
+1. **Vérifier les logs**: `docker-compose logs`
+2. **Consulter la documentation**: `docs/`
+3. **Vérifier l'environnement**: `python scripts/check_env.py`
+4. **Sauvegarder**: `python scripts/backup.py`
+5. **Créer une issue** avec les détails
 
-## 🔒 Sécurité
+### Ressources
 
-### Ajouter un .dockerignore
-```
-.git
-.env
-__pycache__
-*.pyc
-.streamlit/secrets.toml
-```
-
-### Ajouter au .gitignore
-```
-.env
-.streamlit/secrets.toml
-```
+- Documentation: `docs/`
+- Issues GitHub: (votre repo)
+- Logs: `docker-compose logs`
 
 ---
 
-## 💡 Recommandation
-
-**Pour un usage personnel/local**: 
-- Docker Compose (le plus simple)
-
-**Pour partager avec d'autres**:
-- Cloudflare Tunnel (gratuit, sécurisé, pas de config réseau)
-
-**Pour un déploiement professionnel**:
-- Docker + Nginx + SSL (le plus robuste)
+**Dernière mise à jour**: 2025-11-27
+**Version**: 2.0.0
